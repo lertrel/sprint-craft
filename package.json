@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "./node_modules/.bin/tsc -p tsconfig.json --noEmit",
-    "build:standalone": "vite build -c vite.standalone.config.ts",
+    "build:standalone": "vite build -c vite.standalone.config.ts && node scripts/generate-standalone-html.mjs",
     "test": "./node_modules/.bin/vitest run",
     "test:watch": "./node_modules/.bin/vitest",
     "coverage": "./node_modules/.bin/vitest run --coverage"

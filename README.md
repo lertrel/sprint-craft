@@ -36,4 +36,23 @@ Open:
 
 ## Notes
 
-- A `build:standalone` script exists for a later “download & open” deliverable, but the standalone entry/output is not part of Iteration 1 yet.
+- Iteration 1 includes the basic runtime + input/UI scaffolding and a standalone build output.
+
+## Standalone (no Node/npm at runtime)
+
+This produces **two install options**:
+- **Two-file**: `standalone/index.html` + `standalone/sprint-craft.js`
+- **Single-file**: `standalone/sprint-craft.single.html` (bundle inlined)
+
+Build:
+
+```bash
+npm install
+npm run build:standalone
+```
+
+Run (download → open):
+- Open `standalone/index.html` (requires `standalone/sprint-craft.js` next to it), or
+- Open `standalone/sprint-craft.single.html` (one file)
+
+Note: some browsers restrict pointer lock when opened via `file://`. If pointer lock doesn’t work, serve the folder with any tiny static server (no npm required), e.g. `python -m http.server` from the `standalone/` directory.
