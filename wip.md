@@ -50,3 +50,13 @@ Iteration 5
   - Build `standalone/` output (single HTML + bundled JS) and document how to open locally
 - Add self-validation checklist to docs and confirm each requirement is met
 
+[Progress]
+
+Iteration 1 — DONE
+- Implemented Babylon.js bootstrap + render loop + resize handling (`src/main.ts`, `src/sprint-craft/app.ts`)
+- Implemented pointer lock click-to-lock and mouse look with pitch clamping; help hides after first successful lock
+- Implemented input state tracking (keys + mouse), Digit1–Digit9 hotbar selection, and RMB context menu suppression on canvas
+- Implemented hotbar UI rendering (9 slots) + selected slot styling + toast notifications
+- Implemented temporary debug ground + lighting with deterministic names for validation
+- Updated README with run instructions, controls, and troubleshooting
+- Added unit + integration-style tests (Vitest + jsdom) that verify Iteration 1 acceptance criteria; tests pass
