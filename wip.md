@@ -60,3 +60,11 @@ Iteration 1 — DONE
 - Implemented temporary debug ground + lighting with deterministic names for validation
 - Updated README with run instructions, controls, and troubleshooting
 - Added unit + integration-style tests (Vitest + jsdom) that verify Iteration 1 acceptance criteria; tests pass
+
+Iteration 2 — DONE
+- Added voxel core data models (`src/sprint-craft/voxels/`): block registry, chunk storage (packed `Uint16Array`), world container with correct negative-coordinate mapping, and player state model
+- Implemented chunk meshing (single mesh per chunk) with face culling (including cross-chunk neighbor awareness) and per-vertex block colors
+- Implemented deterministic world generation for a 3×3 chunk area (flat baseline + small variation) with grass/dirt/stone layering
+- Implemented chunk rebuild scheduling with dirty dedupe, neighbor invalidation, and per-frame rebuild budgeting
+- Integrated voxel world boot into app startup and rendering; ensured no one-mesh-per-block behavior
+- Added Iteration 2 unit + integration tests; all tests pass (`npm test`)
