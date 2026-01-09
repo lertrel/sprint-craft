@@ -10,7 +10,8 @@
     "typecheck": "./node_modules/.bin/tsc -p tsconfig.json --noEmit",
     "build:standalone": "vite build -c vite.standalone.config.ts",
     "test": "./node_modules/.bin/vitest run",
-    "test:watch": "./node_modules/.bin/vitest"
+    "test:watch": "./node_modules/.bin/vitest",
+    "coverage": "./node_modules/.bin/vitest run --coverage"
   },
   "dependencies": {
     "@babylonjs/core": "^8.45.1"
@@ -18,8 +19,9 @@
   "devDependencies": {
     "typescript": "^5.7.3",
     "vite": "^6.0.7",
-    "vitest": "^2.1.8",
-    "jsdom": "^26.0.0"
+    "vitest": "^2.1.9",
+    "jsdom": "^26.0.0",
+    "@vitest/coverage-v8": "^2.1.9"
   }
 }
 
