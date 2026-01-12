@@ -104,6 +104,68 @@ export function createFakeBabylon(): {
     }
   }
 
+  class Color3 {
+    r: number;
+    g: number;
+    b: number;
+    constructor(r: number, g: number, b: number) {
+      this.r = r;
+      this.g = g;
+      this.b = b;
+    }
+  }
+
+  class StandardMaterial {
+    name: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    scene: any;
+    useVertexColor = false;
+    disableLighting = false;
+    emissiveColor: Color3 | null = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    constructor(name: string, scene: any) {
+      this.name = name;
+      this.scene = scene;
+    }
+    dispose() {
+      // no-op
+    }
+  }
+
+  class Mesh {
+    name: string;
+    scene: FakeScene;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    material: any = null;
+    disposed = false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    appliedVertexData: any = null;
+    constructor(name: string, scene: FakeScene) {
+      this.name = name;
+      this.scene = scene;
+      scene.createdMeshes.push(name);
+      lastScene = scene;
+    }
+    dispose() {
+      this.disposed = true;
+    }
+  }
+
+  class VertexData {
+    positions?: number[];
+    normals?: number[];
+    indices?: number[];
+    colors?: number[];
+    applyToMesh(mesh: Mesh) {
+      mesh.appliedVertexData = {
+        positions: this.positions ?? [],
+        normals: this.normals ?? [],
+        indices: this.indices ?? [],
+        colors: this.colors ?? []
+      };
+    }
+  }
+
   const MeshBuilder = {
     CreateGround: (name: string, _options: { width: number; height: number; subdivisions?: number }, scene: FakeScene) => {
       scene.createdMeshes.push(name);
@@ -117,7 +179,11 @@ export function createFakeBabylon(): {
     FreeCamera,
     Vector3,
     HemisphericLight,
-    MeshBuilder
+    MeshBuilder,
+    Mesh,
+    VertexData,
+    StandardMaterial,
+    Color3
   };
 
   return {

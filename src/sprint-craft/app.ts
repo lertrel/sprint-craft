@@ -7,6 +7,7 @@ import { createToast } from "./ui/toast";
 import { createPointerLock } from "./ui/pointer-lock";
 import { createMouseLook } from "./ui/mouse-look";
 import { createDebugGround } from "./world/debug-ground";
+import { createVoxelDemo } from "./voxels/voxel-demo";
 
 export type BabylonApi = {
   // Intentionally permissive so real Babylon classes are assignable under TS strict mode.
@@ -18,6 +19,18 @@ export type BabylonApi = {
   MeshBuilder: {
     CreateGround: (...args: any[]) => unknown;
   };
+  // Iteration 2 (optional in tests): custom mesh pipeline for chunk rendering.
+  Mesh?: new (...args: any[]) => { dispose?: () => void };
+  VertexData?: new (...args: any[]) => {
+    positions?: number[] | ArrayLike<number> | null;
+    normals?: number[] | ArrayLike<number> | null;
+    indices?: number[] | ArrayLike<number> | null;
+    colors?: number[] | ArrayLike<number> | null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    applyToMesh?: (mesh: any) => void;
+  };
+  StandardMaterial?: new (...args: any[]) => unknown;
+  Color3?: new (...args: any[]) => unknown;
 };
 
 export type EngineLike = {
@@ -136,10 +149,17 @@ export function initApp(options: InitAppOptions): AppHandle {
     pitchClampRad: Math.PI / 2 - 0.02
   });
 
+  const voxelDemo = createVoxelDemo({
+    babylon,
+    scene,
+    rebuildBudgetPerFrame: 2
+  });
+
   // Input is consumed on a per-frame cadence.
   let frameCount = 0;
   engine.runRenderLoop(() => {
     frameCount += 1;
+    voxelDemo.tick();
     scene.render();
     input.endFrame();
   });
@@ -166,6 +186,7 @@ export function initApp(options: InitAppOptions): AppHandle {
       mouseLook.dispose();
       pointerLock.dispose();
       input.dispose();
+      voxelDemo.dispose();
       window.removeEventListener("resize", onResize);
       scene.dispose?.();
       engine.dispose?.();
