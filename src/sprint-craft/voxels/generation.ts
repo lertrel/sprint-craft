@@ -39,7 +39,9 @@ function hash2i(x: number, z: number, seed: number): number {
 
 function heightAt(x: number, z: number, opts: GenerationOptions): number {
   const h = hash2i(x, z, opts.seed);
-  const v = h % opts.heightVariation; // 0..heightVariation-1
+  // Guard against division by zero: if heightVariation <= 0, use flat terrain
+  const variation = opts.heightVariation > 0 ? opts.heightVariation : 1;
+  const v = h % variation; // 0..variation-1
   return opts.baseHeight + v;
 }
 

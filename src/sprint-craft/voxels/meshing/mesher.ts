@@ -20,7 +20,7 @@ type Face = {
   nz: number;
   // Face direction for per-face coloring
   direction: FaceDirection;
-  // 4 vertices in CCW order when viewed from outside the cube.
+  // 4 vertices in CW order when viewed from outside the cube (Babylon.js left-handed).
   corners: readonly [
     readonly [number, number, number],
     readonly [number, number, number],
@@ -155,14 +155,14 @@ export function meshChunk(options: MeshChunkOptions): MeshData {
             colors.push(faceColor[0], faceColor[1], faceColor[2], 1);
           }
 
-          // Two triangles: (0,1,2) and (0,2,3)
+          // Two triangles: (0,2,1) and (0,3,2) - CW winding for Babylon.js left-handed system
           indices.push(
             baseIndex + 0,
+            baseIndex + 2,
             baseIndex + 1,
-            baseIndex + 2,
             baseIndex + 0,
-            baseIndex + 2,
-            baseIndex + 3
+            baseIndex + 3,
+            baseIndex + 2
           );
           faces += 1;
         }
