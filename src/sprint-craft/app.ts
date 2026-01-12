@@ -48,6 +48,7 @@ export type Vec3Like = { x: number; y: number; z: number };
 
 export type CameraLike = {
   fov?: number;
+  position: Vec3Like;
   rotation: { x: number; y: number; z: number };
   setTarget?: (target: any) => void;
 };
@@ -152,14 +153,22 @@ export function initApp(options: InitAppOptions): AppHandle {
   const voxelDemo = createVoxelDemo({
     babylon,
     scene,
+    camera,
+    input,
     rebuildBudgetPerFrame: 2
   });
 
   // Input is consumed on a per-frame cadence.
   let frameCount = 0;
+  let lastNowMs: number | null = null;
   engine.runRenderLoop(() => {
     frameCount += 1;
-    voxelDemo.tick();
+    const nowMs = window.performance?.now?.() ?? Date.now();
+    const dtSecRaw =
+      lastNowMs === null ? 1 / 60 : Math.max(0, (nowMs - lastNowMs) / 1000);
+    lastNowMs = nowMs;
+    const dtSec = Number.isFinite(dtSecRaw) && dtSecRaw > 0 ? dtSecRaw : 1 / 60;
+    voxelDemo.tick(dtSec);
     scene.render();
     input.endFrame();
   });

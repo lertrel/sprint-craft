@@ -68,3 +68,9 @@ Iteration 2 — DONE
 - Implemented chunk rebuild scheduling with dirty dedupe, neighbor invalidation, and per-frame rebuild budgeting
 - Integrated voxel world boot into app startup and rendering; ensured no one-mesh-per-block behavior
 - Added Iteration 2 unit + integration tests; all tests pass (`npm test`)
+
+Iteration 3 — DONE
+- Implemented player movement controller (WASD relative to view yaw, gravity/jump, sprint, crouch/crawl with blocked stand-up when low ceiling)
+- Implemented manual voxel collision (player AABB vs solid voxels, axis-separated resolution, stable grounded detection, wall sliding, ceiling handling, minimal snag prevention)
+- Implemented safe spawn above ground and deterministic respawn when out-of-bounds/invalid state
+- Added Iteration 3 unit + integration-ish tests; all tests pass (`npm test`)

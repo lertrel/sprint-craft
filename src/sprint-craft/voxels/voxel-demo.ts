@@ -1,11 +1,16 @@
 import type { BabylonApi, SceneLike } from "../app";
+import type { CameraLike } from "../app";
+import type { InputState } from "../input";
 import { generateInitialWorld, DEFAULT_GENERATION } from "./generation";
 import { createChunkRebuildScheduler } from "./rebuild-scheduler";
 import { createChunkRenderer } from "./chunk-renderer";
 import { createWorld } from "./world";
+import { createPlayerController } from "./player-controller";
+import { createDefaultPlayerState } from "./player-state";
+import { findSafeSpawnAboveGround } from "./spawn";
 
 export type VoxelDemo = {
-  tick: () => void;
+  tick: (dtSec: number) => void;
   dispose: () => void;
   getChunkCount: () => number;
   getChunkMeshCount: () => number;
@@ -15,9 +20,11 @@ export type VoxelDemo = {
 export function createVoxelDemo(options: {
   babylon: BabylonApi;
   scene: SceneLike;
+  camera: CameraLike;
+  input: InputState;
   rebuildBudgetPerFrame?: number;
 }): VoxelDemo {
-  const { babylon, scene, rebuildBudgetPerFrame = 2 } = options;
+  const { babylon, scene, camera, input, rebuildBudgetPerFrame = 2 } = options;
 
   const world = createWorld();
   const scheduler = createChunkRebuildScheduler();
@@ -39,7 +46,22 @@ export function createVoxelDemo(options: {
   // Build everything immediately once so the world is visible at boot.
   scheduler.step(Number.POSITIVE_INFINITY, rebuildOne);
 
-  const tick = () => {
+  const playerModel = createDefaultPlayerState();
+  const player = createPlayerController({
+    input,
+    camera,
+    getVoxel: world.getVoxel,
+    spawn: () =>
+      findSafeSpawnAboveGround({
+        world,
+        player: playerModel,
+        halfWidth: 0.3,
+        column: { x: 0, z: 0 }
+      })
+  });
+
+  const tick = (dtSec: number) => {
+    player.tick(dtSec);
     scheduler.step(rebuildBudgetPerFrame, rebuildOne);
   };
 
