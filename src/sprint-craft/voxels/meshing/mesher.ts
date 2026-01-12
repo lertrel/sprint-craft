@@ -1,4 +1,4 @@
-import { getBlockDef } from "../blocks";
+import { getBlockDef, getBlockFaceColor, type FaceDirection } from "../blocks";
 import { CHUNK_SIZE, type Chunk } from "../chunk";
 import type { MeshData } from "./mesh-types";
 
@@ -18,6 +18,8 @@ type Face = {
   nx: number;
   ny: number;
   nz: number;
+  // Face direction for per-face coloring
+  direction: FaceDirection;
   // 4 vertices in CCW order when viewed from outside the cube.
   corners: readonly [
     readonly [number, number, number],
@@ -30,11 +32,12 @@ type Face = {
 };
 
 const FACES: readonly Face[] = [
-  // +X
+  // +X (side face)
   {
     nx: 1,
     ny: 0,
     nz: 0,
+    direction: "side",
     neighborOffset: [1, 0, 0],
     corners: [
       [1, 0, 0],
@@ -43,11 +46,12 @@ const FACES: readonly Face[] = [
       [1, 0, 1]
     ]
   },
-  // -X
+  // -X (side face)
   {
     nx: -1,
     ny: 0,
     nz: 0,
+    direction: "side",
     neighborOffset: [-1, 0, 0],
     corners: [
       [0, 0, 1],
@@ -56,11 +60,12 @@ const FACES: readonly Face[] = [
       [0, 0, 0]
     ]
   },
-  // +Y
+  // +Y (top face)
   {
     nx: 0,
     ny: 1,
     nz: 0,
+    direction: "top",
     neighborOffset: [0, 1, 0],
     corners: [
       [0, 1, 1],
@@ -69,11 +74,12 @@ const FACES: readonly Face[] = [
       [0, 1, 0]
     ]
   },
-  // -Y
+  // -Y (bottom face)
   {
     nx: 0,
     ny: -1,
     nz: 0,
+    direction: "bottom",
     neighborOffset: [0, -1, 0],
     corners: [
       [0, 0, 0],
@@ -82,11 +88,12 @@ const FACES: readonly Face[] = [
       [0, 0, 1]
     ]
   },
-  // +Z
+  // +Z (side face)
   {
     nx: 0,
     ny: 0,
     nz: 1,
+    direction: "side",
     neighborOffset: [0, 0, 1],
     corners: [
       [1, 0, 1],
@@ -95,11 +102,12 @@ const FACES: readonly Face[] = [
       [0, 0, 1]
     ]
   },
-  // -Z
+  // -Z (side face)
   {
     nx: 0,
     ny: 0,
     nz: -1,
+    direction: "side",
     neighborOffset: [0, 0, -1],
     corners: [
       [0, 0, 0],
@@ -137,11 +145,14 @@ export function meshChunk(options: MeshChunkOptions): MeshData {
           const nDef = getBlockDef(nId);
           if (nDef.isSolid) continue; // cull internal faces
 
+          // Get face-specific color (supports per-face coloring for blocks like grass)
+          const faceColor = getBlockFaceColor(def, face.direction);
+
           const baseIndex = positions.length / 3;
           for (const c of face.corners) {
             positions.push(wx + c[0], wy + c[1], wz + c[2]);
             normals.push(face.nx, face.ny, face.nz);
-            colors.push(def.color[0], def.color[1], def.color[2], 1);
+            colors.push(faceColor[0], faceColor[1], faceColor[2], 1);
           }
 
           // Two triangles: (0,1,2) and (0,2,3)
