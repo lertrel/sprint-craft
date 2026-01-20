@@ -142,6 +142,15 @@ export function initApp(options: InitAppOptions): AppHandle {
     }
   });
 
+  // Track pointer lock state changes to prevent browser shortcuts when playing.
+  const onLockChange = () => {
+    const isLocked = document.pointerLockElement === canvas;
+    input.setPreventDefaults?.(isLocked);
+  };
+  document.addEventListener("pointerlockchange", onLockChange);
+  // Initialize based on current lock state.
+  onLockChange();
+
   const mouseLook = createMouseLook({
     canvas,
     document,
@@ -192,6 +201,7 @@ export function initApp(options: InitAppOptions): AppHandle {
     input,
     getFrameCount: () => frameCount,
     dispose: () => {
+      document.removeEventListener("pointerlockchange", onLockChange);
       mouseLook.dispose();
       pointerLock.dispose();
       input.dispose();

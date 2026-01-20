@@ -118,6 +118,36 @@ const FACES: readonly Face[] = [
   }
 ];
 
+/**
+ * Compute a shading multiplier based on face direction.
+ * This gives different faces different brightness to help define edges.
+ * Top faces are brightest, side faces medium, bottom faces darkest.
+ */
+function getFaceShading(face: Face): number {
+  // Top faces: brightest
+  if (face.ny > 0) return 1.0;
+  // Bottom faces: darkest
+  if (face.ny < 0) return 0.65;
+  // Side faces: vary slightly by direction for edge definition
+  // +X/-X sides slightly different from +Z/-Z sides
+  if (face.nx !== 0) return 0.8;
+  return 0.85;
+}
+
+/**
+ * Compute altitude-based shading to give depth perception.
+ * Blocks at higher altitude are slightly brighter.
+ * Range: 0.75 (at y=-16) to 1.0 (at y=48+)
+ */
+function getAltitudeShading(wy: number): number {
+  // Normalize y to a 0..1 range across typical world height
+  const minY = -16;
+  const maxY = 48;
+  const t = Math.max(0, Math.min(1, (wy - minY) / (maxY - minY)));
+  // Subtle brightness boost from 0.8 to 1.0
+  return 0.8 + t * 0.2;
+}
+
 export function meshChunk(options: MeshChunkOptions): MeshData {
   const { chunk, origin, getVoxel } = options;
 
@@ -147,12 +177,23 @@ export function meshChunk(options: MeshChunkOptions): MeshData {
 
           // Get face-specific color (supports per-face coloring for blocks like grass)
           const faceColor = getBlockFaceColor(def, face.direction);
+          
+          // Apply face-direction shading and altitude shading for better depth perception
+          const faceShade = getFaceShading(face);
+          const altShade = getAltitudeShading(wy);
+          const combinedShade = faceShade * altShade;
 
           const baseIndex = positions.length / 3;
           for (const c of face.corners) {
             positions.push(wx + c[0], wy + c[1], wz + c[2]);
             normals.push(face.nx, face.ny, face.nz);
-            colors.push(faceColor[0], faceColor[1], faceColor[2], 1);
+            // Apply shading to vertex colors
+            colors.push(
+              faceColor[0] * combinedShade,
+              faceColor[1] * combinedShade,
+              faceColor[2] * combinedShade,
+              1
+            );
           }
 
           // Two triangles: (0,2,1) and (0,3,2) - CW winding for Babylon.js left-handed system
