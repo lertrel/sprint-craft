@@ -3,7 +3,7 @@ import type { CameraLike } from "../app";
 import type { PlayerState, PlayerStance } from "./player-state";
 import { createDefaultPlayerState } from "./player-state";
 import type { VoxelGetter } from "./voxel-collision";
-import { aabbIntersectsSolidVoxels, makePlayerAabb, moveAndCollideAabb } from "./voxel-collision";
+import { aabbIntersectsSolidVoxels, isStandingOnGround, makePlayerAabb, moveAndCollideAabb } from "./voxel-collision";
 
 export type PlayerController = {
   readonly state: PlayerState;
@@ -207,8 +207,25 @@ export function createPlayerController(options: PlayerControllerOptions): Player
     if (moved.collided.y) {
       if (state.velocity.y < 0 && moved.grounded) grounded = true;
       state.velocity.y = 0;
-    } else {
-      grounded = false;
+    }
+    
+    // Use stable ground detection to prevent bouncing oscillation.
+    // This checks if there's solid ground directly beneath the player,
+    // which is more reliable than collision detection at integer boundaries.
+    if (state.velocity.y <= 0) {
+      const standingOnGround = isStandingOnGround(getVoxel, state.position, tuning.halfWidth);
+      if (standingOnGround) {
+        grounded = true;
+        // Snap to integer Y when on ground to prevent floating-point drift
+        const blockBelowY = Math.floor(state.position.y - 0.001);
+        const snapY = blockBelowY + 1;
+        if (Math.abs(state.position.y - snapY) < 0.01) {
+          state.position.y = snapY;
+        }
+      } else if (!moved.collided.y) {
+        // Only set grounded to false if we're not colliding AND not standing on ground
+        grounded = false;
+      }
     }
 
     // If we are intersecting after movement for any reason, force respawn (safety).

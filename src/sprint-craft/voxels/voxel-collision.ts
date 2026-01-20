@@ -30,6 +30,36 @@ function voxelIsSolid(getVoxel: VoxelGetter, wx: number, wy: number, wz: number)
 // This ensures that when the player is exactly at a boundary, we get consistent behavior.
 const COLLISION_EPSILON = 0.001;
 
+/**
+ * Check if a player standing at the given position has solid ground beneath their feet.
+ * This is used for stable ground detection to prevent bouncing oscillation.
+ * Unlike the AABB check, this explicitly checks the blocks directly below the player.
+ */
+export function isStandingOnGround(getVoxel: VoxelGetter, position: { x: number; y: number; z: number }, halfWidth: number): boolean {
+  // Check if there's solid ground beneath the player's feet.
+  // We check all blocks that could be under the player's footprint.
+  const footY = position.y - COLLISION_EPSILON; // Just below feet
+  const blockY = Math.floor(footY);
+  
+  // Check the four corners and center of the player's footprint
+  const checkPoints = [
+    { x: position.x, z: position.z }, // Center
+    { x: position.x - halfWidth + COLLISION_EPSILON, z: position.z - halfWidth + COLLISION_EPSILON },
+    { x: position.x + halfWidth - COLLISION_EPSILON, z: position.z - halfWidth + COLLISION_EPSILON },
+    { x: position.x - halfWidth + COLLISION_EPSILON, z: position.z + halfWidth - COLLISION_EPSILON },
+    { x: position.x + halfWidth - COLLISION_EPSILON, z: position.z + halfWidth - COLLISION_EPSILON }
+  ];
+  
+  for (const pt of checkPoints) {
+    const blockX = Math.floor(pt.x);
+    const blockZ = Math.floor(pt.z);
+    if (voxelIsSolid(getVoxel, blockX, blockY, blockZ)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function aabbIntersectsSolidVoxels(getVoxel: VoxelGetter, aabb: Aabb): boolean {
   // Voxels are unit cubes at integer coordinates [x,x+1) etc.
   // We shrink the AABB slightly inward to avoid false positives when merely touching a face.
