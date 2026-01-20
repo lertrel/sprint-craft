@@ -116,6 +116,11 @@ export function initApp(options: InitAppOptions): AppHandle {
     scene
   );
   camera.fov = 1.0;
+  // Set near clipping plane very close to prevent geometry from being clipped
+  // when the player is standing on blocks or near walls.
+  // Default is typically 0.1 or 1.0, which clips too much for first-person voxel games.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ("minZ" in camera) (camera as any).minZ = 0.05;
   // Do not replace Babylon's rotation vector in runtime; only initialize its components.
   if (!camera.rotation) {
     // For test doubles only.
