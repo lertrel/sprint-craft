@@ -26,17 +26,20 @@ function voxelIsSolid(getVoxel: VoxelGetter, wx: number, wy: number, wz: number)
   return getBlockDef(id).isSolid;
 }
 
+// Small epsilon to avoid floating-point precision issues at integer boundaries.
+// This ensures that when the player is exactly at a boundary, we get consistent behavior.
+const COLLISION_EPSILON = 0.001;
+
 export function aabbIntersectsSolidVoxels(getVoxel: VoxelGetter, aabb: Aabb): boolean {
   // Voxels are unit cubes at integer coordinates [x,x+1) etc.
-  // We iterate voxels that intersect the half-open AABB interval [min, max).
-  // This treats exact face-touching as non-intersecting, while remaining robust
-  // to floating-point rounding around integer boundaries.
-  const minX = Math.floor(aabb.min.x);
-  const maxX = Math.ceil(aabb.max.x) - 1;
-  const minY = Math.floor(aabb.min.y);
-  const maxY = Math.ceil(aabb.max.y) - 1;
-  const minZ = Math.floor(aabb.min.z);
-  const maxZ = Math.ceil(aabb.max.z) - 1;
+  // We shrink the AABB slightly inward to avoid false positives when merely touching a face.
+  // This treats exact face-touching as non-intersecting, which allows sliding along walls.
+  const minX = Math.floor(aabb.min.x + COLLISION_EPSILON);
+  const maxX = Math.floor(aabb.max.x - COLLISION_EPSILON);
+  const minY = Math.floor(aabb.min.y + COLLISION_EPSILON);
+  const maxY = Math.floor(aabb.max.y - COLLISION_EPSILON);
+  const minZ = Math.floor(aabb.min.z + COLLISION_EPSILON);
+  const maxZ = Math.floor(aabb.max.z - COLLISION_EPSILON);
 
   for (let z = minZ; z <= maxZ; z += 1) {
     for (let y = minY; y <= maxY; y += 1) {
@@ -69,13 +72,14 @@ function resolveAxis(options: {
     return { pos: next, collided: false, grounded: false };
   }
 
-  // Clamp to the nearest voxel boundary for determinism and stability.
+  // Find all voxels that could potentially intersect the AABB.
+  // Use a slightly expanded range to ensure we catch all relevant voxels.
   const minX = Math.floor(aabb.min.x);
-  const maxX = Math.ceil(aabb.max.x) - 1;
+  const maxX = Math.floor(aabb.max.x);
   const minY = Math.floor(aabb.min.y);
-  const maxY = Math.ceil(aabb.max.y) - 1;
+  const maxY = Math.floor(aabb.max.y);
   const minZ = Math.floor(aabb.min.z);
-  const maxZ = Math.ceil(aabb.max.z) - 1;
+  const maxZ = Math.floor(aabb.max.z);
 
   let grounded = false;
   const corrected = { ...next };
@@ -87,30 +91,34 @@ function resolveAxis(options: {
         if (!voxelIsSolid(getVoxel, x, y, z)) continue;
         if (axis === "x") {
           if (delta.x > 0) {
-            const candidateX = x - halfWidth;
+            // Push back so player's right edge doesn't penetrate block's left edge
+            const candidateX = x - halfWidth - COLLISION_EPSILON;
             if (!didClamp || candidateX < corrected.x) corrected.x = candidateX;
             didClamp = true;
           } else if (delta.x < 0) {
-            const candidateX = (x + 1) + halfWidth;
+            // Push forward so player's left edge doesn't penetrate block's right edge
+            const candidateX = (x + 1) + halfWidth + COLLISION_EPSILON;
             if (!didClamp || candidateX > corrected.x) corrected.x = candidateX;
             didClamp = true;
           }
         } else if (axis === "z") {
           if (delta.z > 0) {
-            const candidateZ = z - halfWidth;
+            const candidateZ = z - halfWidth - COLLISION_EPSILON;
             if (!didClamp || candidateZ < corrected.z) corrected.z = candidateZ;
             didClamp = true;
           } else if (delta.z < 0) {
-            const candidateZ = (z + 1) + halfWidth;
+            const candidateZ = (z + 1) + halfWidth + COLLISION_EPSILON;
             if (!didClamp || candidateZ > corrected.z) corrected.z = candidateZ;
             didClamp = true;
           }
         } else {
           if (delta.y > 0) {
-            const candidateY = y - height;
+            // Hitting ceiling - push down
+            const candidateY = y - height - COLLISION_EPSILON;
             if (!didClamp || candidateY < corrected.y) corrected.y = candidateY;
             didClamp = true;
           } else if (delta.y < 0) {
+            // Landing on ground - push up to stand on top of block
             const candidateY = y + 1;
             if (!didClamp || candidateY > corrected.y) corrected.y = candidateY;
             didClamp = true;

@@ -113,7 +113,7 @@ describe("Iteration 1 (integration-ish)", () => {
     vi.useRealTimers();
   });
 
-  it("creates deterministic debug ground + light when enabled", () => {
+  it("creates deterministic debug light when enabled (ground removed for visual clarity)", () => {
     setDom(baseHudDom());
     const { babylon, getLastScene } = createFakeBabylon();
 
@@ -121,8 +121,10 @@ describe("Iteration 1 (integration-ish)", () => {
     const app = initApp({ babylon, canvas, document, window, enableDebugGround: true });
 
     const scene = getLastScene();
+    // Debug light is still created for scene illumination.
     expect(scene?.createdLights).toContain("debugLight");
-    expect(scene?.createdMeshes).toContain("debugGround");
+    // Note: debugGround mesh was removed to avoid visual confusion with voxel terrain.
+    // The voxel terrain now provides all visible ground with proper collision.
 
     app.dispose();
   });

@@ -89,6 +89,19 @@ export function createChunkRenderer(options: {
     vd.colors = meshData.colors;
     vd.applyToMesh(mesh);
 
+    // Enable edge rendering to make block boundaries clearer.
+    // This draws dark lines at sharp edges between faces.
+    if (typeof (mesh as any).enableEdgesRendering === "function") {
+      (mesh as any).enableEdgesRendering();
+      // Edge width in screen pixels
+      (mesh as any).edgesWidth = 1.5;
+      // Dark edge color for contrast
+      if ("Color4" in babylon) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (mesh as any).edgesColor = new (babylon as any).Color4(0.1, 0.1, 0.1, 1);
+      }
+    }
+
     meshes.set(key, { dispose: () => mesh.dispose?.() });
   };
 
