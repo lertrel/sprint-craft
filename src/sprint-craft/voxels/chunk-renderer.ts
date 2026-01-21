@@ -23,13 +23,20 @@ export function createChunkRenderer(options: {
       ? (() => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const mat = new (babylon as any).StandardMaterial("chunkMat", scene as any);
-          // Prefer vertex colors for block coloration.
+          // Use vertex colors for block coloration.
           (mat as any).useVertexColor = true;
-          // Make colors readable regardless of lighting setup.
-          (mat as any).disableLighting = true;
+          // Enable lighting so normals affect shading - gives depth perception.
+          (mat as any).disableLighting = false;
           if ("Color3" in babylon) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (mat as any).emissiveColor = new (babylon as any).Color3(1, 1, 1);
+            // Set diffuse and ambient to white so vertex colors show through lighting.
+            (mat as any).diffuseColor = new (babylon as any).Color3(1, 1, 1);
+            (mat as any).ambientColor = new (babylon as any).Color3(0.4, 0.4, 0.4);
+            // Some emissive to ensure blocks aren't too dark.
+            (mat as any).emissiveColor = new (babylon as any).Color3(0.15, 0.15, 0.15);
+            // Specular highlights can help define edges.
+            (mat as any).specularColor = new (babylon as any).Color3(0.1, 0.1, 0.1);
+            (mat as any).specularPower = 32;
           }
           return mat as unknown;
         })()
@@ -81,6 +88,19 @@ export function createChunkRenderer(options: {
     vd.indices = meshData.indices;
     vd.colors = meshData.colors;
     vd.applyToMesh(mesh);
+
+    // Enable edge rendering to make block boundaries clearer.
+    // This draws dark lines at sharp edges between faces.
+    if (typeof (mesh as any).enableEdgesRendering === "function") {
+      (mesh as any).enableEdgesRendering();
+      // Edge width in screen pixels
+      (mesh as any).edgesWidth = 1.5;
+      // Dark edge color for contrast
+      if ("Color4" in babylon) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (mesh as any).edgesColor = new (babylon as any).Color4(0.1, 0.1, 0.1, 1);
+      }
+    }
 
     meshes.set(key, { dispose: () => mesh.dispose?.() });
   };

@@ -16,12 +16,8 @@ export function createDebugGround(options: {
     scene as unknown
   );
 
-  // Ground: deterministic name for tests.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const ground = babylon.MeshBuilder.CreateGround(
-    "debugGround",
-    { width: 64, height: 64, subdivisions: 2 },
-    scene as unknown
-  );
+  // Note: Debug ground plane removed to avoid visual confusion with voxel terrain.
+  // The voxel terrain now has proper lighting and shading to be clearly visible.
+  // Previously there was a flat plane at y=0 with no collision that caused confusion.
 }
 

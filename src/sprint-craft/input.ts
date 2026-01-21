@@ -8,6 +8,7 @@ export type InputState = {
   endFrame: () => void;
   dispose: () => void;
   onDigit?: (digit: number) => void;
+  setPreventDefaults?: (prevent: boolean) => void;
 };
 
 type InternalState = {
@@ -18,6 +19,29 @@ type InternalState = {
   mousePressed: Set<number>;
   mouseReleased: Set<number>;
 };
+
+// Game keys that should have their browser default prevented when playing.
+// This stops Ctrl-W closing the tab, Ctrl-D bookmarking, Ctrl-S saving, etc.
+const GAME_KEYS_PREVENT_DEFAULT = new Set([
+  "ControlLeft",
+  "ControlRight",
+  "ShiftLeft",
+  "ShiftRight",
+  "KeyW",
+  "KeyA",
+  "KeyS",
+  "KeyD",
+  "Space",
+  "Digit1",
+  "Digit2",
+  "Digit3",
+  "Digit4",
+  "Digit5",
+  "Digit6",
+  "Digit7",
+  "Digit8",
+  "Digit9"
+]);
 
 export function createInputState(options: { target: Window }): InputState {
   const { target } = options;
@@ -32,8 +56,33 @@ export function createInputState(options: { target: Window }): InputState {
   };
 
   let onDigit: ((digit: number) => void) | undefined;
+  let preventDefaults = false;
+
+  // Handler for the capture phase - intercepts events before the browser processes them.
+  // This is critical for preventing browser shortcuts like Ctrl-W, Ctrl-S, Ctrl-D.
+  const onKeyDownCapture = (ev: KeyboardEvent) => {
+    if (!preventDefaults) return;
+
+    // Prevent ALL keyboard shortcuts when Ctrl, Alt, or Meta is held while playing.
+    // This covers Ctrl-W (close tab), Ctrl-S (save), Ctrl-D (bookmark), etc.
+    if (ev.ctrlKey || ev.altKey || ev.metaKey) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      return;
+    }
+
+    // Also prevent default for game keys even without modifiers
+    if (GAME_KEYS_PREVENT_DEFAULT.has(ev.code)) {
+      ev.preventDefault();
+    }
+  };
 
   const onKeyDown = (ev: KeyboardEvent) => {
+    // Additional prevention in bubble phase for safety
+    if (preventDefaults && GAME_KEYS_PREVENT_DEFAULT.has(ev.code)) {
+      ev.preventDefault();
+    }
+
     if (!state.keysDown.has(ev.code)) {
       state.keysDown.add(ev.code);
       state.keysPressed.add(ev.code);
@@ -64,6 +113,9 @@ export function createInputState(options: { target: Window }): InputState {
     state.mouseReleased.add(ev.button);
   };
 
+  // Use capture phase for keydown to intercept browser shortcuts BEFORE they're processed.
+  // This is the only reliable way to prevent Ctrl-W, Ctrl-S, etc.
+  target.addEventListener("keydown", onKeyDownCapture, { capture: true });
   target.addEventListener("keydown", onKeyDown);
   target.addEventListener("keyup", onKeyUp);
   target.addEventListener("mousedown", onMouseDown);
@@ -83,6 +135,7 @@ export function createInputState(options: { target: Window }): InputState {
       state.mouseReleased.clear();
     },
     dispose: () => {
+      target.removeEventListener("keydown", onKeyDownCapture, { capture: true });
       target.removeEventListener("keydown", onKeyDown);
       target.removeEventListener("keyup", onKeyUp);
       target.removeEventListener("mousedown", onMouseDown);
@@ -93,6 +146,9 @@ export function createInputState(options: { target: Window }): InputState {
     },
     set onDigit(fn: ((digit: number) => void) | undefined) {
       onDigit = fn;
+    },
+    setPreventDefaults(prevent: boolean) {
+      preventDefaults = prevent;
     }
   };
 }

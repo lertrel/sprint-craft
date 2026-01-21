@@ -48,6 +48,7 @@ export type Vec3Like = { x: number; y: number; z: number };
 
 export type CameraLike = {
   fov?: number;
+  position: Vec3Like;
   rotation: { x: number; y: number; z: number };
   setTarget?: (target: any) => void;
 };
@@ -115,6 +116,11 @@ export function initApp(options: InitAppOptions): AppHandle {
     scene
   );
   camera.fov = 1.0;
+  // Set near clipping plane very close to prevent geometry from being clipped
+  // when the player is standing on blocks or near walls.
+  // Default is typically 0.1 or 1.0, which clips too much for first-person voxel games.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ("minZ" in camera) (camera as any).minZ = 0.05;
   // Do not replace Babylon's rotation vector in runtime; only initialize its components.
   if (!camera.rotation) {
     // For test doubles only.
@@ -141,6 +147,15 @@ export function initApp(options: InitAppOptions): AppHandle {
     }
   });
 
+  // Track pointer lock state changes to prevent browser shortcuts when playing.
+  const onLockChange = () => {
+    const isLocked = document.pointerLockElement === canvas;
+    input.setPreventDefaults?.(isLocked);
+  };
+  document.addEventListener("pointerlockchange", onLockChange);
+  // Initialize based on current lock state.
+  onLockChange();
+
   const mouseLook = createMouseLook({
     canvas,
     document,
@@ -152,14 +167,22 @@ export function initApp(options: InitAppOptions): AppHandle {
   const voxelDemo = createVoxelDemo({
     babylon,
     scene,
+    camera,
+    input,
     rebuildBudgetPerFrame: 2
   });
 
   // Input is consumed on a per-frame cadence.
   let frameCount = 0;
+  let lastNowMs: number | null = null;
   engine.runRenderLoop(() => {
     frameCount += 1;
-    voxelDemo.tick();
+    const nowMs = window.performance?.now?.() ?? Date.now();
+    const dtSecRaw =
+      lastNowMs === null ? 1 / 60 : Math.max(0, (nowMs - lastNowMs) / 1000);
+    lastNowMs = nowMs;
+    const dtSec = Number.isFinite(dtSecRaw) && dtSecRaw > 0 ? dtSecRaw : 1 / 60;
+    voxelDemo.tick(dtSec);
     scene.render();
     input.endFrame();
   });
@@ -183,6 +206,7 @@ export function initApp(options: InitAppOptions): AppHandle {
     input,
     getFrameCount: () => frameCount,
     dispose: () => {
+      document.removeEventListener("pointerlockchange", onLockChange);
       mouseLook.dispose();
       pointerLock.dispose();
       input.dispose();
