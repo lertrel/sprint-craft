@@ -216,10 +216,14 @@ export function createPlayerController(options: PlayerControllerOptions): Player
       const standingOnGround = isStandingOnGround(getVoxel, state.position, tuning.halfWidth);
       if (standingOnGround) {
         grounded = true;
-        // Snap to integer Y when on ground to prevent floating-point drift
-        const blockBelowY = Math.floor(state.position.y - 0.001);
+        // Snap to integer Y when on ground to prevent floating-point drift.
+        // Use 0.01 epsilon (larger than COLLISION_EPSILON 0.001) to handle boundary cases.
+        // When position.y = 6.001, we want blockBelowY = 5, not 6.
+        // floor(6.001 - 0.01) = floor(5.991) = 5 ✓
+        // floor(6.001 - 0.001) = floor(6.0) = 6 ✗
+        const blockBelowY = Math.floor(state.position.y - 0.01);
         const snapY = blockBelowY + 1;
-        if (Math.abs(state.position.y - snapY) < 0.01) {
+        if (Math.abs(state.position.y - snapY) < 0.02) {
           state.position.y = snapY;
         }
       } else if (!moved.collided.y) {

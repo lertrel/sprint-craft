@@ -30,6 +30,12 @@ function voxelIsSolid(getVoxel: VoxelGetter, wx: number, wy: number, wz: number)
 // This ensures that when the player is exactly at a boundary, we get consistent behavior.
 const COLLISION_EPSILON = 0.001;
 
+// Epsilon for ground detection - must be larger than COLLISION_EPSILON to avoid
+// boundary issues. When position.y = integer + COLLISION_EPSILON (e.g., 6.001),
+// using the same epsilon would give floor(6.001 - 0.001) = floor(6.0) = 6, not 5.
+// Using a larger epsilon ensures we always get the block BELOW the player's feet.
+const GROUND_CHECK_EPSILON = 0.01;
+
 /**
  * Check if a player standing at the given position has solid ground beneath their feet.
  * This is used for stable ground detection to prevent bouncing oscillation.
@@ -38,7 +44,9 @@ const COLLISION_EPSILON = 0.001;
 export function isStandingOnGround(getVoxel: VoxelGetter, position: { x: number; y: number; z: number }, halfWidth: number): boolean {
   // Check if there's solid ground beneath the player's feet.
   // We check all blocks that could be under the player's footprint.
-  const footY = position.y - COLLISION_EPSILON; // Just below feet
+  // Use GROUND_CHECK_EPSILON (larger than COLLISION_EPSILON) to handle boundary cases
+  // like position.y = 6.001 correctly (should check block 5, not 6).
+  const footY = position.y - GROUND_CHECK_EPSILON;
   const blockY = Math.floor(footY);
   
   // Check the four corners and center of the player's footprint

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createWorld } from "../src/sprint-craft/voxels/world";
 import { BlockId } from "../src/sprint-craft/voxels/blocks";
 import { createPlayerController } from "../src/sprint-craft/voxels/player-controller";
+import { isStandingOnGround } from "../src/sprint-craft/voxels/voxel-collision";
 
 type StubInput = {
   down: Set<string>;
@@ -241,6 +242,105 @@ describe("Iteration 3: player movement controller (unit-ish)", () => {
     underCeil.tick(1 / 60);
     iCeil.api.endFrame();
     expect(underCeil.state.stance).toBe("crawling");
+  });
+});
+
+describe("Iteration 3: ground detection boundary edge cases", () => {
+  it("isStandingOnGround detects ground at exact integer position (y=1.0)", () => {
+    const w = createWorld();
+    fillFlatGround(w, { y: 0 }); // Ground at y=0, player stands at y=1
+
+    // Player at exactly y=1.0 (standing on block at y=0)
+    const result = isStandingOnGround(w.getVoxel, { x: 0.5, y: 1.0, z: 0.5 }, 0.3);
+    expect(result).toBe(true);
+  });
+
+  it("isStandingOnGround detects ground at integer + small epsilon (y=1.001)", () => {
+    const w = createWorld();
+    fillFlatGround(w, { y: 0 }); // Ground at y=0, player stands at y=1
+
+    // Player at y=1.001 (integer + COLLISION_EPSILON) - this was the buggy case
+    // Should still detect ground at y=0
+    const result = isStandingOnGround(w.getVoxel, { x: 0.5, y: 1.001, z: 0.5 }, 0.3);
+    expect(result).toBe(true);
+  });
+
+  it("isStandingOnGround detects ground at integer + 2*epsilon (y=1.002)", () => {
+    const w = createWorld();
+    fillFlatGround(w, { y: 0 }); // Ground at y=0, player stands at y=1
+
+    // Player at y=1.002 - should still detect ground
+    const result = isStandingOnGround(w.getVoxel, { x: 0.5, y: 1.002, z: 0.5 }, 0.3);
+    expect(result).toBe(true);
+  });
+
+  it("isStandingOnGround returns false when player is too high above ground", () => {
+    const w = createWorld();
+    fillFlatGround(w, { y: 0 }); // Ground at y=0
+
+    // Player at y=1.5 - clearly above the ground surface, should return false
+    const result = isStandingOnGround(w.getVoxel, { x: 0.5, y: 1.5, z: 0.5 }, 0.3);
+    expect(result).toBe(false);
+  });
+
+  it("isStandingOnGround returns false when there is no ground below", () => {
+    const w = createWorld();
+    // No ground filled
+
+    // Player at y=1.0 with no ground below
+    const result = isStandingOnGround(w.getVoxel, { x: 0.5, y: 1.0, z: 0.5 }, 0.3);
+    expect(result).toBe(false);
+  });
+
+  it("player does not oscillate when standing at boundary position y=integer+epsilon", () => {
+    const w = createWorld();
+    fillFlatGround(w, { y: 5 }); // Ground at y=5, player stands at y=6
+
+    const cam = makeCamera(0);
+    const input = makeInput();
+    const c = createPlayerController({
+      input: input.api as any,
+      camera: cam as any,
+      getVoxel: w.getVoxel,
+      spawn: () => ({ x: 0.5, y: 6.001, z: 0.5 }) // Spawn at boundary position
+    });
+
+    // Initial state: should be grounded immediately or after settling
+    stepN(c, input.api, 10);
+    expect(c.isGrounded()).toBe(true);
+    
+    // Position should snap to y=6 (standing on block at y=5)
+    expect(Math.abs(c.state.position.y - 6)).toBeLessThan(0.02);
+
+    // After more frames without input, should remain stable (no oscillation)
+    const yBefore = c.state.position.y;
+    stepN(c, input.api, 60);
+    const yAfter = c.state.position.y;
+    
+    // Position should be stable, not oscillating
+    expect(Math.abs(yAfter - yBefore)).toBeLessThan(0.001);
+    expect(c.isGrounded()).toBe(true);
+  });
+
+  it("player snaps to correct Y position after landing from boundary heights", () => {
+    const w = createWorld();
+    fillFlatGround(w, { y: 0 }); // Ground at y=0, player stands at y=1
+
+    const cam = makeCamera(0);
+    const input = makeInput();
+    const c = createPlayerController({
+      input: input.api as any,
+      camera: cam as any,
+      getVoxel: w.getVoxel,
+      spawn: () => ({ x: 0.5, y: 5, z: 0.5 }) // Start high
+    });
+
+    // Let player fall and land
+    stepN(c, input.api, 180);
+    
+    expect(c.isGrounded()).toBe(true);
+    // Should snap to exactly y=1 (standing on block at y=0)
+    expect(Math.abs(c.state.position.y - 1)).toBeLessThan(0.001);
   });
 });
 
