@@ -54,5 +54,42 @@ describe("InputState (unit)", () => {
     expect(seen).toEqual([3, 9]);
     input.dispose();
   });
+
+  it("prevents ctrl shortcuts while still tracking keys", () => {
+    const input = createInputState({ target: window });
+    input.setPreventDefaults?.(true);
+
+    const ctrlDown = new KeyboardEvent("keydown", {
+      code: "ControlLeft",
+      ctrlKey: true,
+      cancelable: true,
+      bubbles: true
+    });
+    window.dispatchEvent(ctrlDown);
+    expect(ctrlDown.defaultPrevented).toBe(true);
+    expect(input.isKeyDown("ControlLeft")).toBe(true);
+
+    const wDown = new KeyboardEvent("keydown", {
+      code: "KeyW",
+      ctrlKey: true,
+      cancelable: true,
+      bubbles: true
+    });
+    window.dispatchEvent(wDown);
+    expect(wDown.defaultPrevented).toBe(true);
+    expect(input.isKeyDown("KeyW")).toBe(true);
+
+    const wUp = new KeyboardEvent("keyup", {
+      code: "KeyW",
+      ctrlKey: true,
+      cancelable: true,
+      bubbles: true
+    });
+    window.dispatchEvent(wUp);
+    expect(wUp.defaultPrevented).toBe(true);
+    expect(input.isKeyDown("KeyW")).toBe(false);
+
+    input.dispose();
+  });
 });
 
