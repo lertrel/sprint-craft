@@ -216,7 +216,8 @@ describe("Iteration 4: block interaction system (integration-ish)", () => {
       world: w,
       scheduler,
       player,
-      getSelectedSlot: () => selectedSlot
+      getSelectedSlot: () => selectedSlot,
+      cooldownSec: 0
     });
 
     input.state.pressed.add(2);
@@ -225,6 +226,7 @@ describe("Iteration 4: block interaction system (integration-ish)", () => {
 
     selectedSlot = 3;
     cam.position.x = 2.5;
+    input.state.down.delete(2);
     input.state.pressed.add(2);
     input.state.down.add(2);
     step(interactor, input.api);
