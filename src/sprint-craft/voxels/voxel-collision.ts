@@ -169,6 +169,11 @@ function resolveAxis(options: {
           } else if (delta.y < 0) {
             // Landing on ground - push up to stand on top of block
             const candidateY = y + 1;
+            // Prevent side-wall collisions from pushing the player upward while falling.
+            // Only accept ground pushes that are not above the previous feet position.
+            if (candidateY > position.y + COLLISION_EPSILON) {
+              continue;
+            }
             if (!didClamp || candidateY > corrected.y) corrected.y = candidateY;
             didClamp = true;
             grounded = true;

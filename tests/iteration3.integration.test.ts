@@ -103,6 +103,55 @@ describe("Iteration 3: manual voxel collision (integration-ish)", () => {
     expect(Math.abs(c.state.position.y - 1)).toBeLessThan(1e-6);
   });
 
+  it("does not bounce upward when crouch-sliding away from a wall", () => {
+    const w = createWorld();
+
+    // Ground
+    for (let z = -6; z <= 6; z += 1) {
+      for (let x = -6; x <= 6; x += 1) {
+        w.setVoxel(x, 0, z, BlockId.Dirt);
+      }
+    }
+
+    // Wall in front at z=2
+    for (let y = 0; y <= 3; y += 1) {
+      for (let x = -2; x <= 2; x += 1) {
+        w.setVoxel(x, y, 2, BlockId.Stone);
+      }
+    }
+
+    const cam = makeCamera(0);
+    const input = makeInput();
+    input.down.add("AltLeft");
+    input.down.add("KeyW");
+
+    const c = createPlayerController({
+      input: input.api as any,
+      camera: cam as any,
+      getVoxel: w.getVoxel,
+      spawn: () => ({ x: 0.5, y: 1, z: 0.5 })
+    });
+
+    // Move into the wall while crouching.
+    stepN(c, input.api, 120);
+    expect(c.isGrounded()).toBe(true);
+
+    // Strafe away while still crouching.
+    input.down.delete("KeyW");
+    input.down.add("KeyD");
+    let maxY = c.state.position.y;
+    let minY = c.state.position.y;
+    for (let i = 0; i < 120; i += 1) {
+      c.tick(1 / 60);
+      input.api.endFrame();
+      maxY = Math.max(maxY, c.state.position.y);
+      minY = Math.min(minY, c.state.position.y);
+    }
+
+    expect(maxY).toBeLessThanOrEqual(1.05);
+    expect(minY).toBeGreaterThanOrEqual(0.95);
+  });
+
   it("does not get permanently stuck on an exterior corner (minimal snag prevention)", () => {
     const w = createWorld();
 
