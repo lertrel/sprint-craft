@@ -74,3 +74,11 @@ Iteration 3 — DONE
 - Implemented manual voxel collision (player AABB vs solid voxels, axis-separated resolution, stable grounded detection, wall sliding, ceiling handling, minimal snag prevention)
 - Implemented safe spawn above ground and deterministic respawn when out-of-bounds/invalid state
 - Added Iteration 3 unit + integration-ish tests; all tests pass (`npm test`)
+
+[Progress]
+
+Iteration 4 — DONE
+- Implemented block interaction system with camera raycast, face detection, break/place, and player-overlap placement veto
+- Added additional block types and hotbar slot mapping for placement selection
+- Added interaction cooldown gating to prevent rapid spam
+- Added Iteration 4 unit + integration tests; all tests pass (`npm test`)
