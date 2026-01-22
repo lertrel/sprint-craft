@@ -78,7 +78,7 @@ describe("Iteration 5: unit checks per spec item", () => {
   });
 
   it("standalone build config targets standalone output and IIFE bundle name", () => {
-    const config = readFileSync(new URL("../vite.standalone.config.ts", import.meta.url), "utf8");
+    const config = readFileSync("vite.standalone.config.ts", "utf8");
     expect(config).toContain('base: "./"');
     expect(config).toContain('outDir: "standalone"');
     expect(config).toContain('formats: ["iife"]');
@@ -86,14 +86,14 @@ describe("Iteration 5: unit checks per spec item", () => {
   });
 
   it("README contains standalone usage instructions", () => {
-    const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+    const readme = readFileSync("README.md", "utf8");
     expect(readme).toContain("Standalone (no Node/npm at runtime)");
     expect(readme).toContain("npm run build:standalone");
     expect(readme).toContain("standalone/sprint-craft.single.html");
   });
 
   it("README contains a self-validation checklist with required items", () => {
-    const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+    const readme = readFileSync("README.md", "utf8");
     expect(readme).toContain("SELF-VALIDATION CHECKLIST");
     expect(readme).toContain("Game starts without runtime errors");
     expect(readme).toContain("Player moves correctly");
@@ -105,7 +105,7 @@ describe("Iteration 5: unit checks per spec item", () => {
   });
 
   it("marks all checklist items as checked", () => {
-    const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+    const readme = readFileSync("README.md", "utf8");
     const required = [
       "Game starts without runtime errors",
       "Player moves correctly",
