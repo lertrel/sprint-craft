@@ -12,6 +12,11 @@ export type FakeScene = SceneLike & {
   renderCalls: number;
   createdMeshes: string[];
   createdLights: string[];
+  clearColor?: { r: number; g: number; b: number; a: number };
+  fogMode?: number;
+  fogDensity?: number;
+  fogColor?: { r: number; g: number; b: number };
+  ambientColor?: { r: number; g: number; b: number };
 };
 
 export type FakeCamera = CameraLike & {
@@ -115,6 +120,19 @@ export function createFakeBabylon(): {
     }
   }
 
+  class Color4 {
+    r: number;
+    g: number;
+    b: number;
+    a: number;
+    constructor(r: number, g: number, b: number, a: number) {
+      this.r = r;
+      this.g = g;
+      this.b = b;
+      this.a = a;
+    }
+  }
+
   class StandardMaterial {
     name: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -183,7 +201,8 @@ export function createFakeBabylon(): {
     Mesh,
     VertexData,
     StandardMaterial,
-    Color3
+    Color3,
+    Color4
   };
 
   return {

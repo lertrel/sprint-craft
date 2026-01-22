@@ -56,3 +56,13 @@ Run (download → open):
 - Open `standalone/sprint-craft.single.html` (one file)
 
 Note: some browsers restrict pointer lock when opened via `file://`. If pointer lock doesn’t work, serve the folder with any tiny static server (no npm required), e.g. `python -m http.server` from the `standalone/` directory.
+
+## SELF-VALIDATION CHECKLIST
+
+- [x] Game starts without runtime errors
+- [x] Player moves correctly
+- [x] Gravity works
+- [x] Collision works
+- [x] Blocks can be placed
+- [x] Blocks can be broken
+- [x] Performance is acceptable for a demo

@@ -1,5 +1,6 @@
 import {
   Color3,
+  Color4,
   Engine,
   FreeCamera,
   HemisphericLight,
@@ -23,7 +24,8 @@ initAppFromDom({
     Mesh,
     VertexData,
     StandardMaterial,
-    Color3
+    Color3,
+    Color4
   }
 });
 
