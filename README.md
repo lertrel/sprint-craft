@@ -38,6 +38,16 @@ Open:
 
 - Iteration 1 includes the basic runtime + input/UI scaffolding and a standalone build output.
 
+## Development Status (Iterations 1-5)
+
+- Iteration 1: Engine/scene bootstrap, pointer lock + mouse look, input state + hotbar UI, and initial debug lighting.
+- Iteration 2: Core voxel data models, chunk meshing, world generation, rebuild scheduling, and multi-chunk rendering.
+- Iteration 3: Player movement (WASD, jump, sprint), crouch/crawl stances, manual voxel collision, and safe spawn/respawn.
+- Iteration 4: Block interaction (raycast, break/place), hotbar block types, placement collision checks, and click cooldown.
+- Iteration 5: Collision edge-case polish, sky/fog readability, rebuild throttling, standalone build, and self-validation checklist.
+  - Crouch input supports Alt (preferred) and Ctrl; shortcut prevention improved for gameplay focus.
+  - Wall-crouch bounce fix prevents upward snapping when sliding away from walls.
+
 ## Standalone (no Node/npm at runtime)
 
 This produces **two install options**:
