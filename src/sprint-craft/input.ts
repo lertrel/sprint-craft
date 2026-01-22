@@ -25,6 +25,8 @@ type InternalState = {
 const GAME_KEYS_PREVENT_DEFAULT = new Set([
   "ControlLeft",
   "ControlRight",
+  "AltLeft",
+  "AltRight",
   "ShiftLeft",
   "ShiftRight",
   "KeyW",
@@ -67,12 +69,18 @@ export function createInputState(options: { target: Window }): InputState {
     // This covers Ctrl-W (close tab), Ctrl-S (save), Ctrl-D (bookmark), etc.
     if (ev.ctrlKey || ev.altKey || ev.metaKey) {
       ev.preventDefault();
-      ev.stopPropagation();
       return;
     }
 
     // Also prevent default for game keys even without modifiers
     if (GAME_KEYS_PREVENT_DEFAULT.has(ev.code)) {
+      ev.preventDefault();
+    }
+  };
+
+  const onKeyUpCapture = (ev: KeyboardEvent) => {
+    if (!preventDefaults) return;
+    if (ev.ctrlKey || ev.altKey || ev.metaKey) {
       ev.preventDefault();
     }
   };
@@ -116,6 +124,7 @@ export function createInputState(options: { target: Window }): InputState {
   // Use capture phase for keydown to intercept browser shortcuts BEFORE they're processed.
   // This is the only reliable way to prevent Ctrl-W, Ctrl-S, etc.
   target.addEventListener("keydown", onKeyDownCapture, { capture: true });
+  target.addEventListener("keyup", onKeyUpCapture, { capture: true });
   target.addEventListener("keydown", onKeyDown);
   target.addEventListener("keyup", onKeyUp);
   target.addEventListener("mousedown", onMouseDown);
@@ -136,6 +145,7 @@ export function createInputState(options: { target: Window }): InputState {
     },
     dispose: () => {
       target.removeEventListener("keydown", onKeyDownCapture, { capture: true });
+      target.removeEventListener("keyup", onKeyUpCapture, { capture: true });
       target.removeEventListener("keydown", onKeyDown);
       target.removeEventListener("keyup", onKeyUp);
       target.removeEventListener("mousedown", onMouseDown);

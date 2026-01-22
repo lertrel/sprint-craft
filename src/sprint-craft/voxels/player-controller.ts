@@ -138,8 +138,12 @@ export function createPlayerController(options: PlayerControllerOptions): Player
       return;
     }
 
-    const ctrl = input.isKeyDown("ControlLeft") || input.isKeyDown("ControlRight");
-    if (ctrl) {
+    const crouchKey =
+      input.isKeyDown("AltLeft") ||
+      input.isKeyDown("AltRight") ||
+      input.isKeyDown("ControlLeft") ||
+      input.isKeyDown("ControlRight");
+    if (crouchKey) {
       state.stance = chooseReducedStance(getVoxel, state, tuning.halfWidth);
     } else {
       state.stance = tryStandUp(getVoxel, state, tuning.halfWidth);

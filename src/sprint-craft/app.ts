@@ -31,6 +31,7 @@ export type BabylonApi = {
   };
   StandardMaterial?: new (...args: any[]) => unknown;
   Color3?: new (...args: any[]) => unknown;
+  Color4?: new (...args: any[]) => unknown;
 };
 
 export type EngineLike = {
@@ -71,6 +72,26 @@ export type AppHandle = {
   dispose: () => void;
 };
 
+function applySceneEnvironment(options: { babylon: BabylonApi; scene: SceneLike }): void {
+  const { babylon, scene } = options;
+  const envScene = scene as SceneLike & {
+    clearColor?: { r: number; g: number; b: number; a: number };
+    fogMode?: number;
+    fogDensity?: number;
+    fogColor?: { r: number; g: number; b: number };
+    ambientColor?: { r: number; g: number; b: number };
+  };
+  const sky = { r: 0.63, g: 0.82, b: 0.98 };
+  const Color3Ctor = "Color3" in babylon ? (babylon as any).Color3 : null;
+  const Color4Ctor = "Color4" in babylon ? (babylon as any).Color4 : null;
+
+  envScene.clearColor = Color4Ctor ? new Color4Ctor(sky.r, sky.g, sky.b, 1) : { ...sky, a: 1 };
+  envScene.fogMode = (babylon as any).Scene?.FOGMODE_EXP2 ?? 2;
+  envScene.fogDensity = 0.02;
+  envScene.fogColor = Color3Ctor ? new Color3Ctor(sky.r, sky.g, sky.b) : { ...sky };
+  envScene.ambientColor = Color3Ctor ? new Color3Ctor(0.4, 0.4, 0.4) : { r: 0.4, g: 0.4, b: 0.4 };
+}
+
 export function initApp(options: InitAppOptions): AppHandle {
   const {
     babylon,
@@ -110,6 +131,7 @@ export function initApp(options: InitAppOptions): AppHandle {
   log("Engine initialized");
 
   const scene = new babylon.Scene(engine);
+  applySceneEnvironment({ babylon, scene });
   const camera = new babylon.FreeCamera(
     "camera",
     new babylon.Vector3(0, 1.7, -6),
@@ -147,14 +169,39 @@ export function initApp(options: InitAppOptions): AppHandle {
     }
   });
 
+  const updatePreventDefaults = () => {
+    const isLocked = document.pointerLockElement === canvas;
+    const hasFocus = document.activeElement === canvas;
+    input.setPreventDefaults?.(isLocked || hasFocus);
+  };
   // Track pointer lock state changes to prevent browser shortcuts when playing.
   const onLockChange = () => {
-    const isLocked = document.pointerLockElement === canvas;
-    input.setPreventDefaults?.(isLocked);
+    updatePreventDefaults();
   };
   document.addEventListener("pointerlockchange", onLockChange);
+  const onCanvasMouseDown = () => {
+    canvas.focus();
+    updatePreventDefaults();
+  };
+  canvas.addEventListener("focus", updatePreventDefaults);
+  canvas.addEventListener("blur", updatePreventDefaults);
+  canvas.addEventListener("mousedown", onCanvasMouseDown);
+  const onWindowBlur = () => {
+    input.setPreventDefaults?.(false);
+  };
+  const onWindowFocus = () => {
+    updatePreventDefaults();
+  };
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      updatePreventDefaults();
+    }
+  };
+  window.addEventListener("blur", onWindowBlur);
+  window.addEventListener("focus", onWindowFocus);
+  document.addEventListener("visibilitychange", onVisibilityChange);
   // Initialize based on current lock state.
-  onLockChange();
+  updatePreventDefaults();
 
   const mouseLook = createMouseLook({
     canvas,
@@ -208,6 +255,12 @@ export function initApp(options: InitAppOptions): AppHandle {
     getFrameCount: () => frameCount,
     dispose: () => {
       document.removeEventListener("pointerlockchange", onLockChange);
+      canvas.removeEventListener("focus", updatePreventDefaults);
+      canvas.removeEventListener("blur", updatePreventDefaults);
+      canvas.removeEventListener("mousedown", onCanvasMouseDown);
+      window.removeEventListener("blur", onWindowBlur);
+      window.removeEventListener("focus", onWindowFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       mouseLook.dispose();
       pointerLock.dispose();
       input.dispose();

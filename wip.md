@@ -82,3 +82,11 @@ Iteration 4 — DONE
 - Added additional block types and hotbar slot mapping for placement selection
 - Added interaction cooldown gating to prevent rapid spam
 - Added Iteration 4 unit + integration tests; all tests pass (`npm test`)
+
+[Progress]
+
+Iteration 5 — DONE
+- Added sky/fog environment defaults for readability and retained lighting setup
+- Validated edge-case collision behavior (crouch transitions, ceilings, corner snagging) with tests
+- Confirmed rebuild throttling, standalone config, and docs via Iteration 5 tests
+- Added self-validation checklist to README and Iteration 5 unit + integration tests; all tests pass (`npm test`)

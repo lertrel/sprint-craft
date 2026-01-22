@@ -206,11 +206,11 @@ describe("Iteration 3: player movement controller (unit-ish)", () => {
     const dzSprint = sprint.state.position.z - zSprint0;
     expect(dzSprint).toBeGreaterThan(dzWalk);
 
-    // Ctrl held reduces speed and reduces stance.
+    // Alt held reduces speed and reduces stance.
     const camCrouch = makeCamera(0);
     const iCrouch = makeInput();
     iCrouch.state.down.add("KeyW");
-    iCrouch.state.down.add("ControlLeft");
+    iCrouch.state.down.add("AltLeft");
     const crouch = createPlayerController({
       input: iCrouch.api as any,
       camera: camCrouch as any,
@@ -223,10 +223,24 @@ describe("Iteration 3: player movement controller (unit-ish)", () => {
     expect(dzCrouch).toBeLessThan(dzWalk);
     expect(crouch.state.stance).not.toBe("standing");
 
-    // Under low ceiling: releasing Ctrl should not allow standing up.
+    // Ctrl still works as alternate crouch key.
+    const camCtrl = makeCamera(0);
+    const iCtrl = makeInput();
+    iCtrl.state.down.add("ControlLeft");
+    const ctrlCrouch = createPlayerController({
+      input: iCtrl.api as any,
+      camera: camCtrl as any,
+      getVoxel: w.getVoxel,
+      spawn: () => ({ x: 5.5, y: 3, z: 5.5 })
+    });
+    ctrlCrouch.tick(1 / 60);
+    iCtrl.api.endFrame();
+    expect(ctrlCrouch.state.stance).not.toBe("standing");
+
+    // Under low ceiling: releasing Alt should not allow standing up.
     const camCeil = makeCamera(0);
     const iCeil = makeInput();
-    iCeil.state.down.add("ControlLeft");
+    iCeil.state.down.add("AltLeft");
     const underCeil = createPlayerController({
       input: iCeil.api as any,
       camera: camCeil as any,
@@ -237,8 +251,8 @@ describe("Iteration 3: player movement controller (unit-ish)", () => {
     iCeil.api.endFrame();
     expect(underCeil.state.stance).toBe("crawling");
 
-    // Release Ctrl; should stay reduced because standing would intersect ceiling.
-    iCeil.state.down.delete("ControlLeft");
+    // Release Alt; should stay reduced because standing would intersect ceiling.
+    iCeil.state.down.delete("AltLeft");
     underCeil.tick(1 / 60);
     iCeil.api.endFrame();
     expect(underCeil.state.stance).toBe("crawling");

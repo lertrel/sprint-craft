@@ -24,7 +24,7 @@ Open:
 - **WASD**: move (movement comes in later iterations)
 - **Space**: jump (later iterations)
 - **Shift**: sprint (later iterations)
-- **Ctrl**: crouch/crawl (later iterations)
+- **Alt** (preferred) / **Ctrl**: crouch/crawl (later iterations)
 - **1–9**: select hotbar slot (shows toast)
 - **LMB/RMB**: tracked for later block interactions
 
@@ -37,6 +37,16 @@ Open:
 ## Notes
 
 - Iteration 1 includes the basic runtime + input/UI scaffolding and a standalone build output.
+
+## Development Status (Iterations 1-5)
+
+- Iteration 1: Engine/scene bootstrap, pointer lock + mouse look, input state + hotbar UI, and initial debug lighting.
+- Iteration 2: Core voxel data models, chunk meshing, world generation, rebuild scheduling, and multi-chunk rendering.
+- Iteration 3: Player movement (WASD, jump, sprint), crouch/crawl stances, manual voxel collision, and safe spawn/respawn.
+- Iteration 4: Block interaction (raycast, break/place), hotbar block types, placement collision checks, and click cooldown.
+- Iteration 5: Collision edge-case polish, sky/fog readability, rebuild throttling, standalone build, and self-validation checklist.
+  - Crouch input supports Alt (preferred) and Ctrl; shortcut prevention improved for gameplay focus.
+  - Wall-crouch bounce fix prevents upward snapping when sliding away from walls.
 
 ## Standalone (no Node/npm at runtime)
 
@@ -56,3 +66,13 @@ Run (download → open):
 - Open `standalone/sprint-craft.single.html` (one file)
 
 Note: some browsers restrict pointer lock when opened via `file://`. If pointer lock doesn’t work, serve the folder with any tiny static server (no npm required), e.g. `python -m http.server` from the `standalone/` directory.
+
+## SELF-VALIDATION CHECKLIST
+
+- [x] Game starts without runtime errors
+- [x] Player moves correctly
+- [x] Gravity works
+- [x] Collision works
+- [x] Blocks can be placed
+- [x] Blocks can be broken
+- [x] Performance is acceptable for a demo
