@@ -169,14 +169,29 @@ export function initApp(options: InitAppOptions): AppHandle {
     }
   });
 
+  const updatePreventDefaults = () => {
+    const isLocked = document.pointerLockElement === canvas;
+    const hasFocus = document.activeElement === canvas;
+    input.setPreventDefaults?.(isLocked || hasFocus);
+  };
   // Track pointer lock state changes to prevent browser shortcuts when playing.
   const onLockChange = () => {
-    const isLocked = document.pointerLockElement === canvas;
-    input.setPreventDefaults?.(isLocked);
+    updatePreventDefaults();
   };
   document.addEventListener("pointerlockchange", onLockChange);
+  const onCanvasMouseDown = () => {
+    canvas.focus();
+    updatePreventDefaults();
+  };
+  canvas.addEventListener("focus", updatePreventDefaults);
+  canvas.addEventListener("blur", updatePreventDefaults);
+  canvas.addEventListener("mousedown", onCanvasMouseDown);
+  const onWindowBlur = () => {
+    input.setPreventDefaults?.(false);
+  };
+  window.addEventListener("blur", onWindowBlur);
   // Initialize based on current lock state.
-  onLockChange();
+  updatePreventDefaults();
 
   const mouseLook = createMouseLook({
     canvas,
@@ -230,6 +245,10 @@ export function initApp(options: InitAppOptions): AppHandle {
     getFrameCount: () => frameCount,
     dispose: () => {
       document.removeEventListener("pointerlockchange", onLockChange);
+      canvas.removeEventListener("focus", updatePreventDefaults);
+      canvas.removeEventListener("blur", updatePreventDefaults);
+      canvas.removeEventListener("mousedown", onCanvasMouseDown);
+      window.removeEventListener("blur", onWindowBlur);
       mouseLook.dispose();
       pointerLock.dispose();
       input.dispose();
