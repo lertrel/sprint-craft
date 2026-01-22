@@ -24,7 +24,7 @@ Open:
 - **WASD**: move (movement comes in later iterations)
 - **Space**: jump (later iterations)
 - **Shift**: sprint (later iterations)
-- **Ctrl**: crouch/crawl (later iterations)
+- **Alt** (preferred) / **Ctrl**: crouch/crawl (later iterations)
 - **1–9**: select hotbar slot (shows toast)
 - **LMB/RMB**: tracked for later block interactions
 

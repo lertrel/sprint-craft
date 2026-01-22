@@ -25,6 +25,8 @@ type InternalState = {
 const GAME_KEYS_PREVENT_DEFAULT = new Set([
   "ControlLeft",
   "ControlRight",
+  "AltLeft",
+  "AltRight",
   "ShiftLeft",
   "ShiftRight",
   "KeyW",
