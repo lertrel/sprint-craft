@@ -8,6 +8,7 @@ import { createWorld } from "./world";
 import { createPlayerController } from "./player-controller";
 import { createDefaultPlayerState } from "./player-state";
 import { findSafeSpawnAboveGround } from "./spawn";
+import { createBlockInteractor } from "./block-interaction";
 
 export type VoxelDemo = {
   tick: (dtSec: number) => void;
@@ -22,9 +23,10 @@ export function createVoxelDemo(options: {
   scene: SceneLike;
   camera: CameraLike;
   input: InputState;
+  getSelectedSlot: () => number;
   rebuildBudgetPerFrame?: number;
 }): VoxelDemo {
-  const { babylon, scene, camera, input, rebuildBudgetPerFrame = 2 } = options;
+  const { babylon, scene, camera, input, getSelectedSlot, rebuildBudgetPerFrame = 2 } = options;
 
   const world = createWorld();
   const scheduler = createChunkRebuildScheduler();
@@ -60,8 +62,18 @@ export function createVoxelDemo(options: {
       })
   });
 
+  const interactor = createBlockInteractor({
+    input,
+    camera,
+    world,
+    scheduler,
+    player: player.state,
+    getSelectedSlot
+  });
+
   const tick = (dtSec: number) => {
     player.tick(dtSec);
+    interactor.tick(dtSec);
     scheduler.step(rebuildBudgetPerFrame, rebuildOne);
   };
 
