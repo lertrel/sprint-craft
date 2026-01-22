@@ -189,7 +189,17 @@ export function initApp(options: InitAppOptions): AppHandle {
   const onWindowBlur = () => {
     input.setPreventDefaults?.(false);
   };
+  const onWindowFocus = () => {
+    updatePreventDefaults();
+  };
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      updatePreventDefaults();
+    }
+  };
   window.addEventListener("blur", onWindowBlur);
+  window.addEventListener("focus", onWindowFocus);
+  document.addEventListener("visibilitychange", onVisibilityChange);
   // Initialize based on current lock state.
   updatePreventDefaults();
 
@@ -249,6 +259,8 @@ export function initApp(options: InitAppOptions): AppHandle {
       canvas.removeEventListener("blur", updatePreventDefaults);
       canvas.removeEventListener("mousedown", onCanvasMouseDown);
       window.removeEventListener("blur", onWindowBlur);
+      window.removeEventListener("focus", onWindowFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       mouseLook.dispose();
       pointerLock.dispose();
       input.dispose();
