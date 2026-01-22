@@ -6,7 +6,6 @@ import { BlockId } from "../src/sprint-craft/voxels/blocks";
 import { createPlayerController } from "../src/sprint-craft/voxels/player-controller";
 import { aabbIntersectsSolidVoxels, makePlayerAabb } from "../src/sprint-craft/voxels/voxel-collision";
 import { createChunkRebuildScheduler } from "../src/sprint-craft/voxels/rebuild-scheduler";
-import standaloneConfig from "../vite.standalone.config";
 import { createFakeBabylon } from "./fakes/fake-babylon";
 
 function setDom(html: string) {
@@ -253,10 +252,10 @@ describe("Iteration 5: chunk rebuild throttling (integration)", () => {
 
 describe("Iteration 5: standalone deliverable (integration)", () => {
   it("uses a relative base and outputs sprint-craft.js to standalone/", () => {
-    const config = standaloneConfig as unknown as { base?: string; build?: any };
-    expect(config.base).toBe("./");
-    expect(config.build?.outDir).toBe("standalone");
-    expect(config.build?.lib?.fileName?.()).toBe("sprint-craft.js");
+    const config = readFileSync(new URL("../vite.standalone.config.ts", import.meta.url), "utf8");
+    expect(config).toContain('base: "./"');
+    expect(config).toContain('outDir: "standalone"');
+    expect(config).toContain('fileName: () => "sprint-craft.js"');
   });
 
   it("documents standalone build and local open steps", () => {
