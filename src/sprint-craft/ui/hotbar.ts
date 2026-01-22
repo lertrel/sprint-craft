@@ -5,15 +5,15 @@ export type HotbarHandle = {
 };
 
 const DEFAULT_SWATCHES = [
-  "#8b5e34",
-  "#5a7d3b",
-  "#7f8c8d",
-  "#c2b280",
-  "#3b82f6",
-  "#a855f7",
-  "#ef4444",
-  "#10b981",
-  "#f59e0b"
+  "#73522d", // dirt
+  "#47b747", // grass
+  "#8c8c94", // stone
+  "#c7b880", // sand
+  "#996b38", // wood
+  "#b2473d", // brick
+  "#b8947a", // clay
+  "#595c66", // slate
+  "#ebf0f7" // snow
 ];
 
 export function createHotbar(container: HTMLElement): HotbarHandle {

@@ -89,6 +89,17 @@ export function aabbIntersectsSolidVoxels(getVoxel: VoxelGetter, aabb: Aabb): bo
   return false;
 }
 
+export function aabbIntersectsAabb(a: Aabb, b: Aabb): boolean {
+  return (
+    a.min.x < b.max.x - COLLISION_EPSILON &&
+    a.max.x > b.min.x + COLLISION_EPSILON &&
+    a.min.y < b.max.y - COLLISION_EPSILON &&
+    a.max.y > b.min.y + COLLISION_EPSILON &&
+    a.min.z < b.max.z - COLLISION_EPSILON &&
+    a.max.z > b.min.z + COLLISION_EPSILON
+  );
+}
+
 type ResolveResult = {
   position: { x: number; y: number; z: number };
   collided: { x: boolean; y: boolean; z: boolean };

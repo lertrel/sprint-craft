@@ -2,7 +2,13 @@ export const BlockId = {
   Air: 0,
   Grass: 1,
   Dirt: 2,
-  Stone: 3
+  Stone: 3,
+  Sand: 4,
+  Wood: 5,
+  Brick: 6,
+  Clay: 7,
+  Slate: 8,
+  Snow: 9
 } as const;
 
 export type BlockId = (typeof BlockId)[keyof typeof BlockId];
@@ -46,6 +52,12 @@ export type BlockDef = {
 const GRASS_TOP: Rgb01 = [0.28, 0.72, 0.28]; // Bright green
 const GRASS_SIDE: Rgb01 = [0.38, 0.52, 0.28]; // Greenish-brown (grass on top, dirt below)
 const DIRT_COLOR: Rgb01 = [0.45, 0.32, 0.18]; // Brown
+const SAND_COLOR: Rgb01 = [0.78, 0.72, 0.5]; // Sandy beige
+const WOOD_COLOR: Rgb01 = [0.6, 0.42, 0.22]; // Warm wood brown
+const BRICK_COLOR: Rgb01 = [0.7, 0.28, 0.24]; // Brick red
+const CLAY_COLOR: Rgb01 = [0.72, 0.58, 0.48]; // Muted clay
+const SLATE_COLOR: Rgb01 = [0.35, 0.36, 0.4]; // Dark slate
+const SNOW_COLOR: Rgb01 = [0.92, 0.94, 0.97]; // Snow white
 
 const BLOCKS_BY_ID: Record<number, BlockDef> = {
   [BlockId.Air]: {
@@ -80,6 +92,48 @@ const BLOCKS_BY_ID: Record<number, BlockDef> = {
     color: [0.55, 0.55, 0.58],
     isSolid: true,
     isRenderable: true
+  },
+  [BlockId.Sand]: {
+    id: BlockId.Sand,
+    name: "sand",
+    color: SAND_COLOR,
+    isSolid: true,
+    isRenderable: true
+  },
+  [BlockId.Wood]: {
+    id: BlockId.Wood,
+    name: "wood",
+    color: WOOD_COLOR,
+    isSolid: true,
+    isRenderable: true
+  },
+  [BlockId.Brick]: {
+    id: BlockId.Brick,
+    name: "brick",
+    color: BRICK_COLOR,
+    isSolid: true,
+    isRenderable: true
+  },
+  [BlockId.Clay]: {
+    id: BlockId.Clay,
+    name: "clay",
+    color: CLAY_COLOR,
+    isSolid: true,
+    isRenderable: true
+  },
+  [BlockId.Slate]: {
+    id: BlockId.Slate,
+    name: "slate",
+    color: SLATE_COLOR,
+    isSolid: true,
+    isRenderable: true
+  },
+  [BlockId.Snow]: {
+    id: BlockId.Snow,
+    name: "snow",
+    color: SNOW_COLOR,
+    isSolid: true,
+    isRenderable: true
   }
 };
 
@@ -91,6 +145,29 @@ const BLOCKS_BY_ID: Record<number, BlockDef> = {
  */
 export function getBlockDef(id: number): BlockDef {
   return BLOCKS_BY_ID[id] ?? BLOCKS_BY_ID[BlockId.Air]!;
+}
+
+const HOTBAR_BLOCKS: BlockId[] = [
+  BlockId.Dirt,
+  BlockId.Grass,
+  BlockId.Stone,
+  BlockId.Sand,
+  BlockId.Wood,
+  BlockId.Brick,
+  BlockId.Clay,
+  BlockId.Slate,
+  BlockId.Snow
+];
+
+export function getHotbarBlockId(slot1to9: number): BlockId {
+  if (!Number.isInteger(slot1to9) || slot1to9 < 1 || slot1to9 > 9) {
+    return HOTBAR_BLOCKS[0]!;
+  }
+  return HOTBAR_BLOCKS[slot1to9 - 1] ?? HOTBAR_BLOCKS[0]!;
+}
+
+export function getHotbarBlockIds(): readonly BlockId[] {
+  return HOTBAR_BLOCKS;
 }
 
 /**

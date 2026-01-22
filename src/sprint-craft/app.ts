@@ -169,6 +169,7 @@ export function initApp(options: InitAppOptions): AppHandle {
     scene,
     camera,
     input,
+    getSelectedSlot: () => hotbar.getSelected(),
     rebuildBudgetPerFrame: 2
   });
 
