@@ -1,0 +1,933 @@
+<!-- path: docs/spec/test-doc.md -->
+# Test Documentation: Sprint Craft
+
+## Scope and Constraints
+- Sources inspected: all files under tests/ (including sub-folders).
+- README.md and other non-test files were not inspected directly, but some tests read them at runtime.
+- No external tech documentation was consulted.
+
+## Repository Discovery (Evidence of Completeness)
+### Directory Tree (tests/)
+```text
+tests/
+  fakes/
+    fake-babylon.ts
+  input.unit.test.ts
+  iteration1.integration.test.ts
+  iteration2.integration.test.ts
+  iteration2.unit.test.ts
+  iteration3.integration.test.ts
+  iteration3.unit.test.ts
+  iteration4.integration.test.ts
+  iteration4.unit.test.ts
+  iteration5.integration.test.ts
+  iteration5.unit.test.ts
+```
+
+### Counts
+- Folders: 2
+- Files: 11
+- Approximate number of functions in tests: ~219 (regex count of "function" and "=>" tokens in tests)
+
+## Program Document - Test Suite
+**Assumption:** The heading template from sys-doc is reused for tests. Each test case is listed as a function-like entry using its `it("...")` description, plus any helper functions defined in the file.
+
+### File: `tests/fakes/fake-babylon.ts`
+**File path:** `tests/fakes/fake-babylon.ts`
+**Objective:** Provide a fake Babylon.js API implementation for integration tests, capturing created resources and calls.
+**Functions:**
+- **Function:** `createFakeBabylon(): { babylon: BabylonApi; getLastEngine: () => FakeEngine | null; getLastScene: () => FakeScene | null; getLastCamera: () => FakeCamera | null }`
+  - **Objective:** Construct a stub Babylon API and accessors for the latest engine/scene/camera instances.
+  - **Logic:** Defines internal stub classes (Vector3, Engine, Scene, FreeCamera, HemisphericLight, Color3/Color4, StandardMaterial, Mesh, VertexData), tracks the last created engine/scene/camera, and returns a `babylon` object with class constructors plus getter functions.
+  - **Parameters:** None.
+  - **Returns:** An object with `babylon` constructors and getters for last created engine/scene/camera.
+  - **Side effects & dependencies:** Creates class definitions and maintains module-local tracking state.
+  - **Errors/Exceptions:** None explicit.
+  - **Performance notes:** O(1) setup; no heavy allocations beyond class definitions.
+
+### File: `tests/input.unit.test.ts`
+**File path:** `tests/input.unit.test.ts`
+**Objective:** Unit test coverage for `createInputState` key and mouse tracking behavior.
+**Functions:**
+- **Function:** `it("tracks key down, pressed (edge), and released", ...)`
+  - **Objective:** Verify key down, pressed edge, and released edge semantics.
+  - **Logic:** Dispatches keydown/keyup events on `window`, asserts `isKeyDown`, `wasKeyPressed`, and `wasKeyReleased` behavior across frames.
+  - **Parameters:** Test callback (Vitest).
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Uses DOM events; depends on `createInputState`.
+  - **Errors/Exceptions:** Assertions may throw on failures.
+  - **Performance notes:** O(1) event dispatches.
+
+- **Function:** `it("tracks mouse button down/pressed/released", ...)`
+  - **Objective:** Verify mouse button tracking and edge states.
+  - **Logic:** Dispatches `mousedown`/`mouseup` events, asserts down/pressed/released states with `endFrame`.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** DOM events, input state mutations.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1) event dispatches.
+
+- **Function:** `it("invokes onDigit for Digit1..Digit9 only", ...)`
+  - **Objective:** Ensure only digits 1-9 trigger `onDigit`.
+  - **Logic:** Assigns `onDigit`, dispatches Digit and non-digit keydown events, asserts collected digits.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** DOM events and callback invocation.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("prevents ctrl shortcuts while still tracking keys", ...)`
+  - **Objective:** Verify browser shortcut prevention with Ctrl and key tracking.
+  - **Logic:** Enables preventDefaults, dispatches Ctrl and Ctrl+W key events, asserts `defaultPrevented` and key states.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** DOM events with cancelable/bubbles, `preventDefault` behavior.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+### File: `tests/iteration1.integration.test.ts`
+**File path:** `tests/iteration1.integration.test.ts`
+**Objective:** Integration tests for app boot, DOM HUD wiring, pointer lock, and UI behavior in Iteration 1.
+**Functions:**
+- **Function:** `setDom(html: string): void`
+  - **Objective:** Install HUD HTML and make `document.pointerLockElement` writable for jsdom.
+  - **Logic:** Sets `document.body.innerHTML`, defines `pointerLockElement` with writable property.
+  - **Parameters:** `html` (`string`)
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Mutates DOM and document properties.
+  - **Errors/Exceptions:** None explicit.
+  - **Performance notes:** O(1).
+
+- **Function:** `baseHudDom(): string`
+  - **Objective:** Provide the base HUD DOM used by tests.
+  - **Logic:** Returns a template string with `#renderCanvas`, `#toast`, `#help`, and `#hotbar`.
+  - **Parameters:** None.
+  - **Returns:** `string`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("boots engine/scene and renders frames; logs 'Engine initialized'", ...)`
+  - **Objective:** Validate engine/scene creation, render loop, and logging on startup.
+  - **Logic:** Sets DOM, creates fake Babylon, spies on `console.info`, calls `initApp`, invokes render loop twice, asserts render calls and frame count.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Uses fake Babylon API; runs render loop callbacks; logs to console.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1) for test-scale calls.
+
+- **Function:** `it("resizes engine on window resize and continues rendering", ...)`
+  - **Objective:** Ensure resize event triggers engine resize and does not block rendering.
+  - **Logic:** Dispatches window resize, checks resizeCalls, runs render loop once.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Window event dispatch, fake engine.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("prevents RMB context menu on the canvas", ...)`
+  - **Objective:** Verify context menu is prevented on the canvas.
+  - **Logic:** Dispatches a cancelable contextmenu event on the canvas, asserts `defaultPrevented`.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** DOM events; relies on initApp canvas handler.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("renders 9-slot hotbar and updates selected slot on Digit keys + toast", ...)`
+  - **Objective:** Validate hotbar rendering, selection change, and toast display.
+  - **Logic:** Uses fake timers, checks slot count and selection, dispatches Digit5, asserts selection update and toast show/hide.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** DOM manipulation, timers, input events.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1) with fake timers.
+
+- **Function:** `it("creates deterministic debug light when enabled (ground removed for visual clarity)", ...)`
+  - **Objective:** Ensure debug lighting is created when enabled.
+  - **Logic:** Initializes app with `enableDebugGround: true`, asserts `debugLight` present in created lights.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Fake Babylon lighting.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("requests pointer lock on click, hides help after first lock, and mouse look applies only while locked", ...)`
+  - **Objective:** Validate pointer lock flow, help hiding, and mouse look gating.
+  - **Logic:** Stubs `requestPointerLock`, dispatches mouse events before and after lock, checks toast, help display, and camera rotation changes.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** DOM event dispatch, pointer lock state, camera mutation.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1) for test-scoped events.
+
+- **Function:** `it("fails gracefully with a visible banner when #renderCanvas is missing", ...)`
+  - **Objective:** Validate startup error banner when canvas is missing.
+  - **Logic:** Sets DOM without canvas, calls `initAppFromDom`, asserts `startupError` banner is created.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** DOM mutation and error banner insertion.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+### File: `tests/iteration2.integration.test.ts`
+**File path:** `tests/iteration2.integration.test.ts`
+**Objective:** Integration test for initial voxel world meshing and idle stability.
+**Functions:**
+- **Function:** `setDom(html: string): void`
+  - **Objective:** Install HUD DOM and allow pointerLockElement mutation.
+  - **Logic:** Sets `document.body.innerHTML` and defines writable `pointerLockElement`.
+  - **Parameters:** `html` (`string`)
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** DOM mutation.
+  - **Errors/Exceptions:** None explicit.
+  - **Performance notes:** O(1).
+
+- **Function:** `baseHudDom(): string`
+  - **Objective:** Provide base HUD HTML markup.
+  - **Logic:** Returns template string with canvas and HUD elements.
+  - **Parameters:** None.
+  - **Returns:** `string`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("renders an initial multi-chunk voxel world using one mesh per chunk and should not rebuild meshes when idle", ...)`
+  - **Objective:** Ensure chunk meshing uses per-chunk meshes and does not rebuild while idle.
+  - **Logic:** Initializes app, inspects created meshes count, runs multiple render loop iterations, asserts mesh list unchanged.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Fake Babylon scene; render loop.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1) per test iteration.
+
+### File: `tests/iteration2.unit.test.ts`
+**File path:** `tests/iteration2.unit.test.ts`
+**Objective:** Unit tests for block definitions, chunk storage, world mapping, meshing, generation, and scheduler behavior.
+**Functions:**
+- **Function:** `it("returns defs for known ids and maps unknown to air deterministically", ...)`
+  - **Objective:** Validate block definition lookup and fallback behavior.
+  - **Logic:** Fetches defs for known ids and an unknown id, asserts expected properties.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Uses block registry.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("round-trips set/get at edges and ignores out-of-bounds deterministically", ...)`
+  - **Objective:** Validate chunk local voxel bounds and OOB handling.
+  - **Logic:** Writes to edge voxels, reads back, verifies OOB reads are air and OOB writes do not mutate data.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Uses `createChunk`.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("maps boundaries and negative coordinates deterministically", ...)`
+  - **Objective:** Validate world-to-chunk mapping at boundaries and negatives.
+  - **Logic:** Asserts expected `worldToChunk` outputs for boundary and negative values.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Calls `worldToChunk`.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("set/get works across chunk boundaries", ...)`
+  - **Objective:** Ensure world voxel set/get behaves across chunk edges.
+  - **Logic:** Sets voxels at 15, 16, and -1, then reads them back and compares.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** `createWorld`, `setVoxel`, `getVoxel`.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("one solid block emits 6 faces (12 triangles)", ...)`
+  - **Objective:** Verify mesher output for a single cube.
+  - **Logic:** Creates a single voxel, meshes it, asserts face and index counts.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** `meshChunk`, world access.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(CHUNK_SIZE^3) for meshing, minimal here.
+
+- **Function:** `it("two adjacent blocks cull internal face (10 faces total)", ...)`
+  - **Objective:** Validate face culling between adjacent voxels.
+  - **Logic:** Sets two adjacent voxels, meshes, and asserts face count and indices length.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** `meshChunk`.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(CHUNK_SIZE^3) for meshing.
+
+- **Function:** `it("a filled 2x2x2 cube emits only outer faces (24 faces total)", ...)`
+  - **Objective:** Ensure internal faces are culled in a filled cube.
+  - **Logic:** Sets 2x2x2 voxels, meshes, asserts face and index counts.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** `meshChunk`.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(CHUNK_SIZE^3) for meshing.
+
+- **Function:** `it("culls faces across chunk boundaries via world voxel lookup", ...)`
+  - **Objective:** Validate cross-chunk face culling.
+  - **Logic:** Places boundary voxels in adjacent chunks, meshes one chunk, asserts face count.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** `meshChunk` and `getVoxel`.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(CHUNK_SIZE^3) for meshing.
+
+- **Function:** `it("encodes per-vertex colors and produces multiple distinct colors for mixed blocks", ...)`
+  - **Objective:** Validate vertex color output for mixed block types.
+  - **Logic:** Meshes two block types and checks distinct colors in vertex data.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** `meshChunk`.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(CHUNK_SIZE^3) for meshing.
+
+- **Function:** `it("is deterministic for a fixed seed and generates multiple chunks", ...)`
+  - **Objective:** Validate deterministic world generation with fixed seed.
+  - **Logic:** Generates two worlds with the same seed and compares voxel samples.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** `generateInitialWorld`, world access.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(radius^2 * CHUNK_SIZE^3) for generation.
+
+- **Function:** `it("creates solid ground columns (no holes) in the playable region", ...)`
+  - **Objective:** Ensure generation fills columns without gaps below the surface.
+  - **Logic:** Samples columns, finds top solid Y, and asserts no air below it.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** `generateInitialWorld`, `getVoxel`.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(sample_count * CHUNK_SIZE).
+
+- **Function:** `it("deduplicates dirty marks and respects step budget", ...)`
+  - **Objective:** Validate scheduler deduplication and step budget handling.
+  - **Logic:** Marks chunks dirty, steps scheduler with different budgets, asserts processed counts.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Scheduler queue mutation.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(B) per step.
+
+- **Function:** `it("marks neighbor chunks dirty when a world voxel is on a chunk boundary", ...)`
+  - **Objective:** Ensure boundary edits mark neighboring chunks.
+  - **Logic:** Marks a boundary voxel, processes queue, asserts expected chunk ids in rebuild list.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Scheduler and world-to-chunk mapping.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+### File: `tests/iteration3.integration.test.ts`
+**File path:** `tests/iteration3.integration.test.ts`
+**Objective:** Integration tests for manual voxel collision, ground stability, and spawn/respawn behavior.
+**Functions:**
+- **Function:** `makeCamera(yaw = 0): { position: { x: number; y: number; z: number }; rotation: { x: number; y: number; z: number } }`
+  - **Objective:** Create a stub camera object for controller tests.
+  - **Logic:** Returns a literal object with position and rotation.
+  - **Parameters:** `yaw` (`number`, optional)
+  - **Returns:** Camera-like object.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `makeInput(): { down: Set<string>; pressed: Set<string>; api: ... }`
+  - **Objective:** Provide a stub input interface for controller tests.
+  - **Logic:** Uses `Set`s for `down` and `pressed`, returns API that queries them.
+  - **Parameters:** None.
+  - **Returns:** Stub input object and API.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `stepN(c: ReturnType<typeof createPlayerController>, input: { endFrame: () => void }, n: number, dt = 1 / 60): void`
+  - **Objective:** Advance the controller for `n` frames.
+  - **Logic:** Calls `tick` and `endFrame` in a loop.
+  - **Parameters:** `c` (controller), `input` (input API), `n` (`number`), `dt` (`number`, optional)
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Mutates controller state.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(n).
+
+- **Function:** `it("stops at walls, slides along walls, and handles ceilings + grounded reliably", ...)`
+  - **Objective:** Validate wall collisions, sliding, ceilings, and grounded state.
+  - **Logic:** Builds ground, wall, ceiling; runs controller; asserts position constraints and grounded behavior.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** World voxel mutations and controller physics.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps * collision_checks).
+
+- **Function:** `it("does not bounce upward when crouch-sliding away from a wall", ...)`
+  - **Objective:** Ensure crouch movement near walls does not induce upward bounce.
+  - **Logic:** Builds ground and wall, moves into wall while crouching, then strafes away and measures Y range.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Controller physics.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps).
+
+- **Function:** `it("does not get permanently stuck on an exterior corner (minimal snag prevention)", ...)`
+  - **Objective:** Validate corner handling and ensure no permanent snag.
+  - **Logic:** Builds corner voxels, simulates movement, verifies finite position and no AABB intersection.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Collision checks.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps * collision_checks).
+
+- **Function:** `it("spawns above ground without intersecting solids and settles onto terrain", ...)`
+  - **Objective:** Validate safe spawn placement and settling onto ground.
+  - **Logic:** Builds ground and a pillar, uses `findSafeSpawnAboveGround`, asserts no intersection, simulates landing.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Spawn logic and controller physics.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps).
+
+- **Function:** `it("respawns when out of bounds and returns to normal simulation", ...)`
+  - **Objective:** Ensure out-of-bounds detection triggers respawn and continues simulation.
+  - **Logic:** Sets position below threshold, ticks controller, asserts new position is valid and remains finite.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Controller respawn logic.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps).
+
+### File: `tests/iteration3.unit.test.ts`
+**File path:** `tests/iteration3.unit.test.ts`
+**Objective:** Unit-style tests for movement controller behavior and ground detection edge cases.
+**Functions:**
+- **Function:** `makeInput(): { state: StubInput; api: ... }`
+  - **Objective:** Create a stub input with `down` and `pressed` sets.
+  - **Logic:** Returns state and API methods tied to the sets.
+  - **Parameters:** None.
+  - **Returns:** Stub input object and API.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `makeCamera(yaw = 0): { position: { x: number; y: number; z: number }; rotation: { x: number; y: number; z: number } }`
+  - **Objective:** Create a camera stub for controller tests.
+  - **Logic:** Returns a literal with position and rotation.
+  - **Parameters:** `yaw` (`number`, optional)
+  - **Returns:** Camera-like object.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `fillFlatGround(w: ReturnType<typeof createWorld>, options?: { y?: number; radius?: number }): void`
+  - **Objective:** Fill a flat square of ground with dirt blocks.
+  - **Logic:** Iterates x/z in a radius at a fixed y and sets voxels to dirt.
+  - **Parameters:** `w` (world), `options` (y, radius).
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Mutates world voxels.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(r^2).
+
+- **Function:** `stepN(controller: ReturnType<typeof createPlayerController>, input: { endFrame: () => void }, n: number, dt = 1 / 60): void`
+  - **Objective:** Advance controller state for `n` frames.
+  - **Logic:** Loop over `tick` and `endFrame`.
+  - **Parameters:** `controller`, `input`, `n`, `dt`.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Mutates controller state.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(n).
+
+- **Function:** `it("moves relative to yaw and normalizes diagonal movement", ...)`
+  - **Objective:** Validate yaw-relative movement and diagonal normalization.
+  - **Logic:** Simulates forward movement at different yaws and compares distances for W vs W+D.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Controller physics.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps).
+
+- **Function:** `it("applies gravity, lands stably, and only allows jump when grounded", ...)`
+  - **Objective:** Ensure gravity and jump gating behavior.
+  - **Logic:** Spawns high, lets player fall to ground, tests jump only when grounded and ignores midair jump.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Controller physics.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps).
+
+- **Function:** `it("sprint increases displacement; crouch/crawl reduces speed; standing is blocked by low ceiling", ...)`
+  - **Objective:** Validate movement speed modifiers and stance constraints under low ceilings.
+  - **Logic:** Compares walk vs sprint displacement, tests crouch speed and stance, verifies ceiling blocks standing.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Controller physics and collision.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps).
+
+- **Function:** `it("isStandingOnGround detects ground at exact integer position (y=1.0)", ...)`
+  - **Objective:** Validate ground detection at integer boundary.
+  - **Logic:** Fills ground and checks `isStandingOnGround` at y=1.0.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Ground detection helper.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("isStandingOnGround detects ground at integer + small epsilon (y=1.001)", ...)`
+  - **Objective:** Validate ground detection with epsilon offset.
+  - **Logic:** Uses y=1.001 and expects ground detection to be true.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Ground detection helper.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("isStandingOnGround detects ground at integer + 2*epsilon (y=1.002)", ...)`
+  - **Objective:** Validate detection slightly above boundary.
+  - **Logic:** Uses y=1.002 and expects ground detection to be true.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Ground detection helper.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("isStandingOnGround returns false when player is too high above ground", ...)`
+  - **Objective:** Ensure ground detection fails when clearly above ground.
+  - **Logic:** Uses y=1.5 and expects false.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Ground detection helper.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("isStandingOnGround returns false when there is no ground below", ...)`
+  - **Objective:** Ensure detection fails with no ground.
+  - **Logic:** Uses empty world and expects false.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Ground detection helper.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("player does not oscillate when standing at boundary position y=integer+epsilon", ...)`
+  - **Objective:** Validate stable grounding and snap behavior at boundary positions.
+  - **Logic:** Spawns at y=6.001 above ground and asserts stable y with no oscillation.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Controller physics.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps).
+
+- **Function:** `it("player snaps to correct Y position after landing from boundary heights", ...)`
+  - **Objective:** Ensure snap to correct ground height after fall.
+  - **Logic:** Spawns high and asserts final y after landing is exactly 1.0 within epsilon.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Controller physics.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps).
+
+### File: `tests/iteration4.integration.test.ts`
+**File path:** `tests/iteration4.integration.test.ts`
+**Objective:** Integration tests for block interaction (raycast, place/break), hotbar selection, and cooldown behavior.
+**Functions:**
+- **Function:** `makeInput(): { state: StubInput; api: ... }`
+  - **Objective:** Create a stub mouse input for block interactions.
+  - **Logic:** Uses `Set`s for mouse buttons; returns API for mouse down/pressed states.
+  - **Parameters:** None.
+  - **Returns:** Stub input object and API.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `makeCamera(position: { x: number; y: number; z: number }, yaw = 0, pitch = 0): { position: { x: number; y: number; z: number }; rotation: { x: number; y: number; z: number } }`
+  - **Objective:** Build a camera stub for raycast tests.
+  - **Logic:** Returns a literal with position and rotation.
+  - **Parameters:** `position` (`{ x: number; y: number; z: number }`), `yaw` (`number`), `pitch` (`number`)
+  - **Returns:** Camera-like object.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `step(interactor: { tick: (dt: number) => void }, input: { endFrame: () => void }, dt = 1 / 60): void`
+  - **Objective:** Advance interactor one frame and clear input edges.
+  - **Logic:** Calls `tick` then `endFrame`.
+  - **Parameters:** `interactor`, `input`, `dt`.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Mutates interactor state.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("raycast hits a solid block and returns the expected face normal", ...)`
+  - **Objective:** Validate raycast hit and face normal.
+  - **Logic:** Places a block and raycasts toward it, asserts hit position and face.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** `raycastVoxels`.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps along ray).
+
+- **Function:** `it("raycast returns null when no solid is in range", ...)`
+  - **Objective:** Ensure raycast returns null on empty space.
+  - **Logic:** Raycasts in empty world and expects `null`.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** `raycastVoxels`.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps along ray).
+
+- **Function:** `it("left-click breaks the targeted block and marks its chunk dirty", ...)`
+  - **Objective:** Verify breaking a block updates world and scheduler.
+  - **Logic:** Places a block, simulates LMB, ticks interactor, asserts voxel is air and scheduler queued chunk.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** World mutation, rebuild scheduler.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1) for test case.
+
+- **Function:** `it("right-click places a block adjacent to the hit face when empty", ...)`
+  - **Objective:** Verify placement uses hotbar block id.
+  - **Logic:** Places target block, simulates RMB, ticks interactor, asserts placed block id matches selection.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** World mutation and hotbar mapping.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("prevents placement when the target cell intersects the player AABB", ...)`
+  - **Objective:** Ensure placement is blocked when intersecting player.
+  - **Logic:** Positions player so target cell overlaps AABB, attempts place, asserts voxel remains air.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Collision check via interactor.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("marks neighbor chunks dirty when edits are on a chunk boundary", ...)`
+  - **Objective:** Ensure boundary edits dirty neighbor chunks.
+  - **Logic:** Breaks a boundary block and inspects scheduler rebuild list for both chunks.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Scheduler queue.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("changing hotbar selection changes placed block ids", ...)`
+  - **Objective:** Validate block placement reflects hotbar slot changes.
+  - **Logic:** Places with slot 1, changes to slot 3, places again, asserts both placements.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Interactor, world mutation.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("respects cooldown: two rapid inputs only apply the first edit", ...)`
+  - **Objective:** Verify interaction cooldown prevents rapid repeated edits.
+  - **Logic:** Issues two break attempts inside cooldown and checks only first block is removed.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Interactor cooldown logic.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("applies cooldown across alternating break/place inputs", ...)`
+  - **Objective:** Verify cooldown is shared across break/place actions.
+  - **Logic:** Breaks a block then immediately attempts placement, asserts placement does not occur.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Interactor cooldown logic.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("limits sustained input to the configured interaction rate", ...)`
+  - **Objective:** Ensure sustained inputs respect cooldown rate limiting.
+  - **Logic:** Holds input over multiple ticks and counts blocks removed, asserting upper bound.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Interactor cooldown logic.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps).
+
+### File: `tests/iteration4.unit.test.ts`
+**File path:** `tests/iteration4.unit.test.ts`
+**Objective:** Unit tests for raycast logic and hotbar block registry.
+**Functions:**
+- **Function:** `it("hits the expected cell and face for a straight axis ray", ...)`
+  - **Objective:** Validate raycast hit location and face for axis-aligned ray.
+  - **Logic:** Places a block and asserts hit data for a forward ray.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** `raycastVoxels`.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps along ray).
+
+- **Function:** `it("returns null when there is no solid hit within range", ...)`
+  - **Objective:** Ensure raycast returns null in empty space.
+  - **Logic:** Raycasts in empty world and expects null.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** `raycastVoxels`.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps along ray).
+
+- **Function:** `it("provides at least five distinct, renderable block types", ...)`
+  - **Objective:** Validate hotbar provides multiple renderable block types.
+  - **Logic:** Gets hotbar ids, checks uniqueness and renderable/solid flags.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Block registry.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(N) for hotbar list size.
+
+- **Function:** `it("maps hotbar slots to block ids deterministically", ...)`
+  - **Objective:** Ensure slot mapping is deterministic and falls back for invalid slots.
+  - **Logic:** Reads slots 1, 2, 9, and invalid slots; checks expected values.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** `getHotbarBlockId`.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+### File: `tests/iteration5.integration.test.ts`
+**File path:** `tests/iteration5.integration.test.ts`
+**Objective:** Integration tests for Iteration 5 stability, fog/lighting, scheduler throttling, standalone output, and README checklist.
+**Functions:**
+- **Function:** `setDom(html: string): void`
+  - **Objective:** Install HUD DOM and allow pointerLockElement mutation.
+  - **Logic:** Sets HTML and defines writable `pointerLockElement`.
+  - **Parameters:** `html` (`string`)
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** DOM mutation.
+  - **Errors/Exceptions:** None explicit.
+  - **Performance notes:** O(1).
+
+- **Function:** `baseHudDom(): string`
+  - **Objective:** Provide base HUD markup.
+  - **Logic:** Returns template string with canvas and HUD elements.
+  - **Parameters:** None.
+  - **Returns:** `string`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `makeCamera(yaw = 0): { position: { x: number; y: number; z: number }; rotation: { x: number; y: number; z: number } }`
+  - **Objective:** Create a stub camera.
+  - **Logic:** Returns literal object with position and rotation.
+  - **Parameters:** `yaw` (`number`, optional)
+  - **Returns:** Camera-like object.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `makeInput(): { down: Set<string>; pressed: Set<string>; api: ... }`
+  - **Objective:** Create a stub input API for movement tests.
+  - **Logic:** Uses `down` and `pressed` sets with API methods that query them.
+  - **Parameters:** None.
+  - **Returns:** Stub input object and API.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `fillFlatGround(w: ReturnType<typeof createWorld>, options?: { y?: number; radius?: number }): void`
+  - **Objective:** Fill flat ground for stability tests.
+  - **Logic:** Loops over x/z in radius and sets dirt blocks at y.
+  - **Parameters:** `w`, `options`.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Mutates world voxels.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(r^2).
+
+- **Function:** `stepN(controller: ReturnType<typeof createPlayerController>, input: { endFrame: () => void }, n: number, dt = 1 / 60): void`
+  - **Objective:** Advance controller for N frames.
+  - **Logic:** Loops `tick` and `endFrame`.
+  - **Parameters:** `controller`, `input`, `n`, `dt`.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Mutates controller state.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(n).
+
+- **Function:** `it("keeps a reduced stance under low ceilings until cleared", ...)`
+  - **Objective:** Ensure stance remains reduced under low ceilings and returns to standing after removal.
+  - **Logic:** Builds ceiling, spawns controller, checks stance with/without crouch key, removes ceiling and checks standing.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Controller stance logic and world mutation.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps).
+
+- **Function:** `it("stops upward motion at ceilings and returns to grounded", ...)`
+  - **Objective:** Validate ceiling collision and stable grounding after jump.
+  - **Logic:** Builds ceiling, triggers jump, tracks max Y, asserts grounded and bounded height.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Controller physics and collisions.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps).
+
+- **Function:** `it("does not get stuck on an exterior corner after repeated updates", ...)`
+  - **Objective:** Ensure no snag at exterior corners after many updates.
+  - **Logic:** Builds corner voxels, runs movement, asserts finite position and no AABB intersection.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Controller physics and collision.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(steps).
+
+- **Function:** `it("sets a non-default clear color and fog parameters on init", ...)`
+  - **Objective:** Validate fog and clear color environment settings on init.
+  - **Logic:** Initializes app with fake Babylon, asserts scene clearColor, fogMode, fogDensity, and fogColor.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** App initialization and fake scene state.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("creates a hemispheric light alongside the fog/sky settings", ...)`
+  - **Objective:** Ensure a light is created during init with debug ground enabled.
+  - **Logic:** Initializes app with enableDebugGround, asserts debug light exists.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** App init and fake scene.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("rebuilds only up to the configured budget per step", ...)`
+  - **Objective:** Validate scheduler budget enforcement.
+  - **Logic:** Marks multiple chunks dirty, processes one step, asserts only one rebuild.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Scheduler.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("drains the rebuild queue over multiple budgeted steps", ...)`
+  - **Objective:** Ensure the scheduler drains queue over successive steps.
+  - **Logic:** Marks multiple chunks and steps three times, asserts all processed.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Scheduler.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(B) per step.
+
+- **Function:** `it("uses a relative base and outputs sprint-craft.js to standalone/", ...)`
+  - **Objective:** Validate standalone build config output settings.
+  - **Logic:** Reads `vite.standalone.config.ts` and asserts base/outDir/fileName settings.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Reads file from disk.
+  - **Errors/Exceptions:** Assertions may throw; file read may throw if missing.
+  - **Performance notes:** O(file size).
+
+- **Function:** `it("documents standalone build and local open steps", ...)`
+  - **Objective:** Ensure README documents standalone build steps.
+  - **Logic:** Reads `README.md` and asserts required text.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Reads README from disk.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(file size).
+
+- **Function:** `it("lists all required self-validation items", ...)`
+  - **Objective:** Ensure README lists all self-validation checklist items.
+  - **Logic:** Reads README and asserts presence of checklist items.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Reads README from disk.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(file size).
+
+- **Function:** `it("marks all self-validation items as checked", ...)`
+  - **Objective:** Ensure README checklist items are marked as checked.
+  - **Logic:** Reads README and asserts "- [x]" for each required item.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Reads README from disk.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(file size).
+
+### File: `tests/iteration5.unit.test.ts`
+**File path:** `tests/iteration5.unit.test.ts`
+**Objective:** Unit tests for collision ceiling clamping, fog settings, scheduler budget, and documentation/config assertions.
+**Functions:**
+- **Function:** `setDom(html: string): void`
+  - **Objective:** Install HUD DOM and allow pointerLockElement mutation.
+  - **Logic:** Sets DOM HTML and makes `pointerLockElement` writable.
+  - **Parameters:** `html` (`string`)
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** DOM mutation.
+  - **Errors/Exceptions:** None explicit.
+  - **Performance notes:** O(1).
+
+- **Function:** `baseHudDom(): string`
+  - **Objective:** Provide base HUD markup.
+  - **Logic:** Returns template string with canvas and HUD elements.
+  - **Parameters:** None.
+  - **Returns:** `string`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("clamps upward movement when colliding with a ceiling", ...)`
+  - **Objective:** Validate ceiling collision clamps upward movement.
+  - **Logic:** Places a ceiling voxel, runs `moveAndCollideAabb`, asserts y collision and position clamp.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Collision helper.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(V) for collision scan.
+
+- **Function:** `it("applies fog and sky clear color during initialization", ...)`
+  - **Objective:** Validate environment settings on init.
+  - **Logic:** Initializes app with fake Babylon, asserts fog and clearColor fields.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** App init and fake scene.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("respects rebuild budget per scheduler step", ...)`
+  - **Objective:** Ensure scheduler step respects budget.
+  - **Logic:** Marks multiple chunks dirty, steps once, asserts only one rebuild.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Scheduler queue.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("standalone build config targets standalone output and IIFE bundle name", ...)`
+  - **Objective:** Validate standalone build config settings.
+  - **Logic:** Reads config file and asserts base, outDir, formats, and fileName.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Reads file from disk.
+  - **Errors/Exceptions:** Assertions may throw; file read may throw if missing.
+  - **Performance notes:** O(file size).
+
+- **Function:** `it("README contains standalone usage instructions", ...)`
+  - **Objective:** Ensure README includes standalone instructions.
+  - **Logic:** Reads README and asserts required lines.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Reads README from disk.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(file size).
+
+- **Function:** `it("README contains a self-validation checklist with required items", ...)`
+  - **Objective:** Ensure README contains checklist items.
+  - **Logic:** Reads README and asserts presence of checklist items.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Reads README from disk.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(file size).
+
+- **Function:** `it("marks all checklist items as checked", ...)`
+  - **Objective:** Ensure README checklist items are marked as checked.
+  - **Logic:** Reads README and asserts "- [x]" for each required item.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Reads README from disk.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(file size).
+
