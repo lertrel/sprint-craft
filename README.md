@@ -17,16 +17,17 @@ npm run dev
 Open:
 - `http://localhost:5173`
 
-## Controls (Iteration 1)
+## Controls
 
-- **Click canvas**: pointer lock
+- **Click canvas**: pointer lock (Esc to release)
 - **Mouse**: look
-- **WASD**: move (movement comes in later iterations)
-- **Space**: jump (later iterations)
-- **Shift**: sprint (later iterations)
-- **Alt** (preferred) / **Ctrl**: crouch/crawl (later iterations)
+- **WASD**: move
+- **Space**: jump
+- **Shift**: sprint
+- **Alt** (preferred) / **Ctrl**: crouch/crawl
 - **1–9**: select hotbar slot (shows toast)
-- **LMB/RMB**: tracked for later block interactions
+- **LMB**: break block
+- **RMB**: place block
 
 ## Troubleshooting
 
@@ -36,9 +37,10 @@ Open:
 
 ## Notes
 
-- Iteration 1 includes the basic runtime + input/UI scaffolding and a standalone build output.
+- The demo boots a procedurally generated voxel terrain at startup.
+- Standalone build output lives in `standalone/` (see below).
 
-## Development Status (Iterations 1-5)
+## Implemented Features (Iterations 1-5)
 
 - Iteration 1: Engine/scene bootstrap, pointer lock + mouse look, input state + hotbar UI, and initial debug lighting.
 - Iteration 2: Core voxel data models, chunk meshing, world generation, rebuild scheduling, and multi-chunk rendering.
