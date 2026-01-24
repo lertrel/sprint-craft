@@ -61,6 +61,22 @@
         height: 2px;
         transform: translateY(-50%);
       }
+      #brandSplash {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        font-size: clamp(36px, 8vw, 80px);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: #ffffff;
+        text-shadow: 0 6px 22px rgba(0, 0, 0, 0.65);
+        opacity: 1;
+        transition: opacity 200ms ease;
+      }
+      #brandSplash.hidden {
+        opacity: 0;
+      }
       #hotbar {
         position: absolute;
         left: 50%;
@@ -136,6 +152,7 @@
       <canvas id="renderCanvas" tabindex="0"></canvas>
       <div id="hud">
         <div id="crosshair"></div>
+        <div id="brandSplash">Sprint Craft</div>
         <div id="toast"></div>
         <div id="help">
           <div><b>Sprint Craft</b> — click canvas for pointer lock</div>

@@ -5,10 +5,14 @@ import { generateInitialWorld, DEFAULT_GENERATION } from "./generation";
 import { createChunkRebuildScheduler } from "./rebuild-scheduler";
 import { createChunkRenderer } from "./chunk-renderer";
 import { createWorld } from "./world";
-import { createPlayerController } from "./player-controller";
+import { createHandAnimator } from "./hand-animation";
+import { createPlayerAvatar } from "./player-avatar";
+import { createPlayerController, computeEyeHeight } from "./player-controller";
 import { createDefaultPlayerState } from "./player-state";
 import { findSafeSpawnAboveGround } from "./spawn";
 import { createBlockInteractor } from "./block-interaction";
+import { raycastVoxels } from "./raycast";
+import { createNameplate } from "../ui/nameplate";
 
 export type VoxelDemo = {
   tick: (dtSec: number) => void;
@@ -16,6 +20,8 @@ export type VoxelDemo = {
   getChunkCount: () => number;
   getChunkMeshCount: () => number;
   getRebuildCount: () => number;
+  getWorld: () => ReturnType<typeof createWorld>;
+  getPlayerState: () => ReturnType<typeof createDefaultPlayerState>;
 };
 
 export function createVoxelDemo(options: {
@@ -62,18 +68,99 @@ export function createVoxelDemo(options: {
       })
   });
 
+  const avatar = createPlayerAvatar({ babylon, scene });
+  const nameplate = createNameplate({ babylon, scene, text: "<User 1>" });
+  const handAnimator = createHandAnimator();
+  let actionTriggered = false;
+
   const interactor = createBlockInteractor({
     input,
     camera,
     world,
     scheduler,
     player: player.state,
-    getSelectedSlot
+    getSelectedSlot,
+    onAction: () => {
+      actionTriggered = true;
+    }
   });
+
+  const cameraOffset = { right: 0.35, up: -0.1, back: 2.1 };
+  const minCameraDistance = 0.4;
 
   const tick = (dtSec: number) => {
     player.tick(dtSec);
     interactor.tick(dtSec);
+
+    const yaw = camera.rotation?.y ?? 0;
+    const forward = { x: Math.sin(yaw), z: Math.cos(yaw) };
+    const right = { x: Math.cos(yaw), z: -Math.sin(yaw) };
+    const back = { x: -forward.x, z: -forward.z };
+
+    const eyeHeight = computeEyeHeight(
+      player.state.colliderHeights[player.state.stance]
+    );
+    const anchor = {
+      x: player.state.position.x,
+      y: player.state.position.y + eyeHeight,
+      z: player.state.position.z
+    };
+    const desired = {
+      x: anchor.x + right.x * cameraOffset.right + back.x * cameraOffset.back,
+      y: anchor.y + cameraOffset.up,
+      z: anchor.z + right.z * cameraOffset.right + back.z * cameraOffset.back
+    };
+
+    const dir = {
+      x: desired.x - anchor.x,
+      y: desired.y - anchor.y,
+      z: desired.z - anchor.z
+    };
+    const dist = Math.hypot(dir.x, dir.y, dir.z);
+    const norm =
+      dist > 1e-6
+        ? { x: dir.x / dist, y: dir.y / dist, z: dir.z / dist }
+        : { x: 0, y: 0, z: -1 };
+
+    let targetDistance = dist;
+    if (dist > 0) {
+      const hit = raycastVoxels({
+        origin: anchor,
+        direction: norm,
+        maxDistance: dist,
+        getVoxel: world.getVoxel
+      });
+      if (hit) {
+        targetDistance = Math.max(minCameraDistance, hit.distance - 0.1);
+      }
+    }
+
+    camera.position.x = anchor.x + norm.x * targetDistance;
+    camera.position.y = anchor.y + norm.y * targetDistance;
+    camera.position.z = anchor.z + norm.z * targetDistance;
+
+    const moveSpeed = Math.hypot(player.state.velocity.x, player.state.velocity.z);
+    const swing = handAnimator.update({
+      dtSec,
+      moveSpeed,
+      actionTriggered
+    });
+    actionTriggered = false;
+
+    avatar.setPose({
+      position: player.state.position,
+      yaw,
+      stance: player.state.stance,
+      swing
+    });
+
+    const headPos = avatar.getHeadPosition();
+    nameplate.setPosition({
+      x: headPos.x,
+      y: headPos.y + 0.25 + (eyeHeight * 0.05),
+      z: headPos.z
+    });
+
     scheduler.step(rebuildBudgetPerFrame, rebuildOne);
   };
 
@@ -81,10 +168,14 @@ export function createVoxelDemo(options: {
     tick,
     dispose: () => {
       renderer.dispose();
+      avatar.dispose();
+      nameplate.dispose();
     },
     getChunkCount: () => world.chunks.size,
     getChunkMeshCount: () => renderer.getMeshCount(),
-    getRebuildCount: () => rebuildCount
+    getRebuildCount: () => rebuildCount,
+    getWorld: () => world,
+    getPlayerState: () => player.state
   };
 }
 
