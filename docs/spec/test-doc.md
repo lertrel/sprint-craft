@@ -22,12 +22,14 @@ tests/
   iteration4.unit.test.ts
   iteration5.integration.test.ts
   iteration5.unit.test.ts
+  iteration6.integration.test.ts
+  iteration6.unit.test.ts
 ```
 
 ### Counts
 - Folders: 2
-- Files: 11
-- Approximate number of functions in tests: ~219 (regex count of "function" and "=>" tokens in tests)
+- Files: 13
+- Approximate number of functions in tests: ~244 (regex count of "function" and "=>" tokens in tests)
 
 ## Program Document - Test Suite
 **Assumption:** The heading template from sys-doc is reused for tests. Each test case is listed as a function-like entry using its `it("...")` description, plus any helper functions defined in the file.
@@ -38,7 +40,7 @@ tests/
 **Functions:**
 - **Function:** `createFakeBabylon(): { babylon: BabylonApi; getLastEngine: () => FakeEngine | null; getLastScene: () => FakeScene | null; getLastCamera: () => FakeCamera | null }`
   - **Objective:** Construct a stub Babylon API and accessors for the latest engine/scene/camera instances.
-  - **Logic:** Defines internal stub classes (Vector3, Engine, Scene, FreeCamera, HemisphericLight, Color3/Color4, StandardMaterial, Mesh, VertexData), tracks the last created engine/scene/camera, and returns a `babylon` object with class constructors plus getter functions.
+  - **Logic:** Defines internal stub classes (Vector3, Engine, Scene, FreeCamera, HemisphericLight, Color3/Color4, StandardMaterial, Mesh, VertexData, DynamicTexture), tracks the last created engine/scene/camera, and returns a `babylon` object with class constructors plus getter functions.
   - **Parameters:** None.
   - **Returns:** An object with `babylon` constructors and getters for last created engine/scene/camera.
   - **Side effects & dependencies:** Creates class definitions and maintains module-local tracking state.
@@ -930,4 +932,66 @@ tests/
   - **Side effects & dependencies:** Reads README from disk.
   - **Errors/Exceptions:** Assertions may throw.
   - **Performance notes:** O(file size).
+
+### File: `tests/iteration6.integration.test.ts`
+**File path:** `tests/iteration6.integration.test.ts`
+**Objective:** Integration tests for Iteration 6 branding splash, avatar/nameplate, and shoulder camera clamp.
+**Functions:**
+- **Function:** `setDom(html: string): void`
+  - **Objective:** Install HUD DOM and allow pointerLockElement mutation.
+  - **Logic:** Sets DOM HTML and makes `pointerLockElement` writable.
+  - **Parameters:** `html` (`string`)
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** DOM mutation.
+  - **Errors/Exceptions:** None explicit.
+  - **Performance notes:** O(1).
+
+- **Function:** `baseHudDom(): string`
+  - **Objective:** Provide HUD markup including the branding splash element.
+  - **Logic:** Returns a template string with canvas and HUD elements.
+  - **Parameters:** None.
+  - **Returns:** `string`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("shows the splash on load and hides on first input", ...)`
+  - **Objective:** Validate branding splash visibility and first-input dismissal.
+  - **Logic:** Initializes app, asserts splash present, dispatches `keydown`, asserts splash hidden.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** DOM events; app initialization.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("creates full-body avatar meshes and nameplate text", ...)`
+  - **Objective:** Ensure avatar body parts and nameplate are created.
+  - **Logic:** Initializes app, inspects created meshes, and checks nameplate text.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Fake Babylon scene; mesh creation.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("clamps the camera forward when a voxel blocks the desired position", ...)`
+  - **Objective:** Validate shoulder camera clamp behavior.
+  - **Logic:** Creates a demo world with blocking voxels, ticks, and asserts camera distance shrinks.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** World state mutations; demo tick.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+### File: `tests/iteration6.unit.test.ts`
+**File path:** `tests/iteration6.unit.test.ts`
+**Objective:** Unit tests for Iteration 6 hand animation triggers.
+**Functions:**
+- **Function:** `it("activates a swing when an action is triggered", ...)`
+  - **Objective:** Ensure action triggers set the swing timer and swing output.
+  - **Logic:** Updates the animator, triggers an action, and asserts swing state is activated.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Uses `createHandAnimator`.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
 
