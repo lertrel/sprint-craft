@@ -36,7 +36,7 @@ export type BabylonApi = {
   Color4?: new (...args: any[]) => unknown;
   DynamicTexture?: new (...args: any[]) => {
     drawText?: (...args: any[]) => void;
-    getContext?: () => CanvasRenderingContext2D | null;
+    getContext?: () => unknown;
     getSize?: () => { width: number; height: number };
     dispose?: () => void;
   };

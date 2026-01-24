@@ -53,7 +53,8 @@ export function createPlayerAvatar(options: {
 }): PlayerAvatar {
   const { babylon, scene } = options;
   const builder = babylon.MeshBuilder;
-  if (!builder.CreateBox) {
+  const createBox = builder.CreateBox;
+  if (!createBox) {
     throw new Error("MeshBuilder.CreateBox is required for player avatar");
   }
 
@@ -76,7 +77,7 @@ export function createPlayerAvatar(options: {
 
   const makeBox = (name: string, size: { w: number; h: number; d: number }, parent?: MeshLike) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mesh = builder.CreateBox(
+    const mesh = createBox(
       name,
       { width: size.w, height: size.h, depth: size.d },
       scene as any
