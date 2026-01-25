@@ -11,6 +11,7 @@ export type FakeScene = SceneLike & {
   engine: FakeEngine;
   renderCalls: number;
   createdMeshes: string[];
+  createdMeshObjects: Mesh[];
   createdLights: string[];
   clearColor?: { r: number; g: number; b: number; a: number };
   fogMode?: number;
@@ -72,6 +73,7 @@ export function createFakeBabylon(): {
     engine: FakeEngine;
     renderCalls = 0;
     createdMeshes: string[] = [];
+    createdMeshObjects: Mesh[] = [];
     createdLights: string[] = [];
     constructor(engine: FakeEngine) {
       this.engine = engine;
@@ -139,7 +141,11 @@ export function createFakeBabylon(): {
     scene: any;
     useVertexColor = false;
     disableLighting = false;
+    useAlphaFromDiffuseTexture = false;
+    backFaceCulling = true;
+    diffuseTexture: DynamicTexture | null = null;
     emissiveColor: Color3 | null = null;
+    specularColor: Color3 | null = null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     constructor(name: string, scene: any) {
       this.name = name;
@@ -151,6 +157,7 @@ export function createFakeBabylon(): {
   }
 
   class Mesh {
+    static BILLBOARDMODE_ALL = 7;
     name: string;
     scene: FakeScene;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -158,14 +165,40 @@ export function createFakeBabylon(): {
     disposed = false;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     appliedVertexData: any = null;
+    position = { x: 0, y: 0, z: 0 };
+    rotation = { x: 0, y: 0, z: 0 };
+    scaling = { x: 1, y: 1, z: 1 };
+    parent: Mesh | null = null;
+    billboardMode = 0;
+    isPickable = true;
     constructor(name: string, scene: FakeScene) {
       this.name = name;
       this.scene = scene;
       scene.createdMeshes.push(name);
+      scene.createdMeshObjects.push(this);
       lastScene = scene;
     }
     dispose() {
       this.disposed = true;
+    }
+  }
+
+  class DynamicTexture {
+    name: string;
+    size: { width: number; height: number };
+    lastDrawText: string | null = null;
+    constructor(name: string, size: { width: number; height: number }, _scene?: unknown, _generateMipMaps?: boolean) {
+      this.name = name;
+      this.size = size;
+    }
+    drawText(text: string) {
+      this.lastDrawText = text;
+    }
+    getSize() {
+      return this.size;
+    }
+    dispose() {
+      // no-op
     }
   }
 
@@ -188,7 +221,11 @@ export function createFakeBabylon(): {
     CreateGround: (name: string, _options: { width: number; height: number; subdivisions?: number }, scene: FakeScene) => {
       scene.createdMeshes.push(name);
       return { name };
-    }
+    },
+    CreateBox: (name: string, _options: { width: number; height: number; depth: number }, scene: FakeScene) =>
+      new Mesh(name, scene),
+    CreatePlane: (name: string, _options: { width: number; height: number }, scene: FakeScene) =>
+      new Mesh(name, scene)
   };
 
   const babylon: BabylonApi = {
@@ -202,7 +239,8 @@ export function createFakeBabylon(): {
     VertexData,
     StandardMaterial,
     Color3,
-    Color4
+    Color4,
+    DynamicTexture
   };
 
   return {

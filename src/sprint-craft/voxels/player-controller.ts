@@ -70,7 +70,7 @@ function stanceHeight(s: PlayerState, stance: PlayerStance): number {
   return s.colliderHeights[stance];
 }
 
-function computeEyeHeight(height: number): number {
+export function computeEyeHeight(height: number): number {
   // Keep eye slightly below the top of the collider for stability.
   return Math.max(0.2, height - 0.15);
 }

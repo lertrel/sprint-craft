@@ -18,6 +18,8 @@ export type BabylonApi = {
   HemisphericLight: new (...args: any[]) => unknown;
   MeshBuilder: {
     CreateGround: (...args: any[]) => unknown;
+    CreateBox?: (...args: any[]) => unknown;
+    CreatePlane?: (...args: any[]) => unknown;
   };
   // Iteration 2 (optional in tests): custom mesh pipeline for chunk rendering.
   Mesh?: new (...args: any[]) => { dispose?: () => void };
@@ -32,6 +34,12 @@ export type BabylonApi = {
   StandardMaterial?: new (...args: any[]) => unknown;
   Color3?: new (...args: any[]) => unknown;
   Color4?: new (...args: any[]) => unknown;
+  DynamicTexture?: new (...args: any[]) => {
+    drawText?: (...args: any[]) => void;
+    getContext?: () => unknown;
+    getSize?: () => { width: number; height: number };
+    dispose?: () => void;
+  };
 };
 
 export type EngineLike = {
@@ -110,6 +118,7 @@ export function initApp(options: InitAppOptions): AppHandle {
   const toastEl = document.getElementById("toast");
   const hotbarEl = document.getElementById("hotbar");
   const helpEl = document.getElementById("help");
+  const brandSplashEl = document.getElementById("brandSplash");
 
   if (!toastEl || !hotbarEl || !helpEl) {
     throw new Error("Missing required HUD elements (#toast, #hotbar, #help)");
@@ -203,6 +212,24 @@ export function initApp(options: InitAppOptions): AppHandle {
   // Initialize based on current lock state.
   updatePreventDefaults();
 
+  let brandSplashActive = false;
+  const hideBrandSplash = () => {
+    if (!brandSplashEl || brandSplashEl.classList.contains("hidden")) return;
+    brandSplashEl.classList.add("hidden");
+  };
+  const onFirstInput = () => {
+    hideBrandSplash();
+    if (!brandSplashActive) return;
+    brandSplashActive = false;
+    window.removeEventListener("keydown", onFirstInput);
+    window.removeEventListener("mousedown", onFirstInput);
+  };
+  if (brandSplashEl) {
+    brandSplashActive = true;
+    window.addEventListener("keydown", onFirstInput);
+    window.addEventListener("mousedown", onFirstInput);
+  }
+
   const mouseLook = createMouseLook({
     canvas,
     document,
@@ -261,6 +288,8 @@ export function initApp(options: InitAppOptions): AppHandle {
       window.removeEventListener("blur", onWindowBlur);
       window.removeEventListener("focus", onWindowFocus);
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("keydown", onFirstInput);
+      window.removeEventListener("mousedown", onFirstInput);
       mouseLook.dispose();
       pointerLock.dispose();
       input.dispose();

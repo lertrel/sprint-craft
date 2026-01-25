@@ -1,6 +1,7 @@
 import {
   Color3,
   Color4,
+  DynamicTexture,
   Engine,
   FreeCamera,
   HemisphericLight,
@@ -25,7 +26,8 @@ initAppFromDom({
     VertexData,
     StandardMaterial,
     Color3,
-    Color4
+    Color4,
+    DynamicTexture
   }
 });
 

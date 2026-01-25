@@ -21,6 +21,7 @@ export type BlockInteractorOptions = {
   getSelectedSlot: () => number;
   maxDistance?: number;
   cooldownSec?: number;
+  onAction?: (action: "break" | "place") => void;
 };
 
 const DEFAULT_MAX_DISTANCE = 6;
@@ -46,7 +47,8 @@ export function createBlockInteractor(options: BlockInteractorOptions): BlockInt
     player,
     getSelectedSlot,
     maxDistance = DEFAULT_MAX_DISTANCE,
-    cooldownSec = DEFAULT_COOLDOWN_SEC
+    cooldownSec = DEFAULT_COOLDOWN_SEC,
+    onAction
   } = options;
 
   let cooldownRemaining = 0;
@@ -65,6 +67,7 @@ export function createBlockInteractor(options: BlockInteractorOptions): BlockInt
 
     world.setVoxel(hit.wx, hit.wy, hit.wz, BlockId.Air);
     scheduler.markDirtyForWorldVoxel(hit.wx, hit.wy, hit.wz);
+    onAction?.("break");
     return true;
   };
 
@@ -100,6 +103,7 @@ export function createBlockInteractor(options: BlockInteractorOptions): BlockInt
     const blockId = getHotbarBlockId(getSelectedSlot());
     world.setVoxel(target.x, target.y, target.z, blockId);
     scheduler.markDirtyForWorldVoxel(target.x, target.y, target.z);
+    onAction?.("place");
     return true;
   };
 

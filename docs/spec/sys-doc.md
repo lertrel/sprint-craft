@@ -18,6 +18,7 @@ src/
     ui/
       hotbar.ts
       mouse-look.ts
+      nameplate.ts
       pointer-lock.ts
       toast.ts
     voxels/
@@ -26,10 +27,12 @@ src/
       chunk.ts
       chunk-renderer.ts
       generation.ts
+      hand-animation.ts
       math.ts
       meshing/
         mesh-types.ts
         mesher.ts
+      player-avatar.ts
       player-controller.ts
       player-state.ts
       raycast.ts
@@ -57,12 +60,14 @@ tests/
   iteration4.unit.test.ts
   iteration5.integration.test.ts
   iteration5.unit.test.ts
+  iteration6.integration.test.ts
+  iteration6.unit.test.ts
 ```
 
 ### Counts
 - Folders: 8 (src: 6, tests: 2)
-- Files: 36 (src: 25, tests: 11)
-- Approximate number of functions in src: ~202 (regex count of "function" and "=>" tokens in src)
+- Files: 41 (src: 28, tests: 13)
+- Approximate number of functions in src: ~247 (regex count of "function" and "=>" tokens in src)
 
 ## Program Document - Core Game Function
 **Assumption:** The exact heading template requested was not provided in the prompt; the format below uses the required bold labels (File path, Objective, Function, Objective, Logic, Parameters, Returns, Side effects & dependencies, Errors/Exceptions, Performance notes).
@@ -94,7 +99,7 @@ tests/
 
 - **Function:** `initApp(options: InitAppOptions): AppHandle`
   - **Objective:** Create the full game runtime: HUD, input, camera, world, render loop, and cleanup hooks.
-  - **Logic:** Validates HUD elements, builds toast/hotbar, creates input state, configures pointer lock and mouse look, instantiates Babylon engine/scene/camera, sets camera parameters, creates the voxel demo, starts the render loop with delta time calculation, installs resize and visibility handlers, optionally creates debug lighting, and returns an `AppHandle` with `dispose`.
+  - **Logic:** Validates HUD elements, builds toast/hotbar, creates input state, configures pointer lock and mouse look, wires the branding splash hide-on-first-input behavior, instantiates Babylon engine/scene/camera, sets camera parameters, creates the voxel demo, starts the render loop with delta time calculation, installs resize and visibility handlers, optionally creates debug lighting, and returns an `AppHandle` with `dispose`.
   - **Parameters:** `options` (`{ babylon: BabylonApi; canvas: HTMLCanvasElement; document: Document; window: Window; enableDebugGround?: boolean; onLog?: (msg: string) => void }`)
   - **Returns:** `AppHandle` - `{ engine, scene, camera, input, getFrameCount, dispose }`.
   - **Side effects & dependencies:** DOM queries and mutations, event listeners for pointer lock, focus/blur, visibility, resize; creates Babylon engine/scene/camera; starts render loop; calls `console.info`.
@@ -346,6 +351,19 @@ tests/
   - **Errors/Exceptions:** None.
   - **Performance notes:** O(1).
 
+### File: `src/sprint-craft/ui/nameplate.ts`
+**File path:** `src/sprint-craft/ui/nameplate.ts`
+**Objective:** Create a billboarded nameplate mesh with dynamic text.
+**Functions:**
+- **Function:** `createNameplate(options: { babylon: BabylonApi; scene: SceneLike; text: string; name?: string }): NameplateHandle`
+  - **Objective:** Build a plane mesh with a dynamic texture for the player nameplate.
+  - **Logic:** Creates a plane, attaches a dynamic texture to a material, draws text, enables billboarding, and returns a handle for updates.
+  - **Parameters:** `options` (`{ babylon: BabylonApi; scene: SceneLike; text: string; name?: string }`)
+  - **Returns:** `NameplateHandle` - exposes `setText`, `setPosition`, `dispose`, and `meshName`.
+  - **Side effects & dependencies:** Creates Babylon mesh/material/texture; mutates mesh position.
+  - **Errors/Exceptions:** Throws if `MeshBuilder.CreatePlane` is missing.
+  - **Performance notes:** Constant-time creation; text redraw is lightweight.
+
 ### File: `src/sprint-craft/world/debug-ground.ts`
 **File path:** `src/sprint-craft/world/debug-ground.ts`
 **Objective:** Provide simple lighting for the scene during development/debugging.
@@ -415,7 +433,7 @@ tests/
 - **Function:** `createBlockInteractor(options: BlockInteractorOptions): BlockInteractor`
   - **Objective:** Create a per-frame block interaction controller (break/place).
   - **Logic:** Tracks a cooldown, raycasts from the camera to find target blocks, breaks solid blocks on LMB, places blocks on RMB (if air and not intersecting the player AABB), and schedules chunk rebuilds for changed voxels.
-  - **Parameters:** `options` (`{ input: InputState; camera: CameraLike; world: World; scheduler: ChunkRebuildScheduler; player: PlayerState; getSelectedSlot: () => number; maxDistance?: number; cooldownSec?: number }`)
+  - **Parameters:** `options` (`{ input: InputState; camera: CameraLike; world: World; scheduler: ChunkRebuildScheduler; player: PlayerState; getSelectedSlot: () => number; maxDistance?: number; cooldownSec?: number; onAction?: (action: "break" | "place") => void }`)
   - **Returns:** `BlockInteractor` - exposes `tick`.
   - **Side effects & dependencies:** Reads input; mutates world voxels; enqueues chunk rebuilds; depends on raycast and collision helpers.
   - **Errors/Exceptions:** None explicit.
@@ -617,6 +635,32 @@ tests/
   - **Side effects & dependencies:** Calls `getVoxel` for neighbor lookup; allocates arrays.
   - **Errors/Exceptions:** None explicit.
   - **Performance notes:** Hot path; triple nested loop over CHUNK_SIZE with per-face checks and allocations.
+
+### File: `src/sprint-craft/voxels/hand-animation.ts`
+**File path:** `src/sprint-craft/voxels/hand-animation.ts`
+**Objective:** Provide procedural hand/arm swing data for walking and actions.
+**Functions:**
+- **Function:** `createHandAnimator(): HandAnimator`
+  - **Objective:** Create a stateful animator for walk-cycle and action-triggered swings.
+  - **Logic:** Tracks walk phase and action timer, computes left/right swing angles based on movement speed and action triggers.
+  - **Parameters:** None.
+  - **Returns:** `HandAnimator` - exposes `update` and `getState`.
+  - **Side effects & dependencies:** Maintains internal timers and swing state.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1) per update.
+
+### File: `src/sprint-craft/voxels/player-avatar.ts`
+**File path:** `src/sprint-craft/voxels/player-avatar.ts`
+**Objective:** Create a full-body player avatar with pose updates.
+**Functions:**
+- **Function:** `createPlayerAvatar(options: { babylon: BabylonApi; scene: SceneLike }): PlayerAvatar`
+  - **Objective:** Construct head, torso, arms, and legs as Babylon primitives and expose pose controls.
+  - **Logic:** Builds meshes, applies proportional placement, updates positions/rotations per pose, and returns handle for updates.
+  - **Parameters:** `options` (`{ babylon: BabylonApi; scene: SceneLike }`)
+  - **Returns:** `PlayerAvatar` - exposes `setPose`, `getHeadPosition`, `getStandingHeight`, and `dispose`.
+  - **Side effects & dependencies:** Creates Babylon meshes/materials; updates mesh transforms each tick.
+  - **Errors/Exceptions:** Throws if `MeshBuilder.CreateBox` is missing.
+  - **Performance notes:** O(1) per pose update; mesh creation is constant-time.
 
 ### File: `src/sprint-craft/voxels/player-controller.ts`
 **File path:** `src/sprint-craft/voxels/player-controller.ts`
@@ -944,8 +988,8 @@ tests/
 **Objective:** Orchestrate world generation, rendering, player control, and block interaction.
 **Functions:**
 - **Function:** `createVoxelDemo(options: { babylon: BabylonApi; scene: SceneLike; camera: CameraLike; input: InputState; getSelectedSlot: () => number; rebuildBudgetPerFrame?: number }): VoxelDemo`
-  - **Objective:** Initialize the voxel world, renderer, player controller, and per-frame tick behavior.
-  - **Logic:** Creates world, scheduler, renderer, generates initial terrain, rebuilds meshes, creates player controller and block interactor, and returns a `VoxelDemo` API.
+  - **Objective:** Initialize the voxel world, renderer, player controller, avatar, and per-frame tick behavior.
+  - **Logic:** Creates world, scheduler, renderer, generates initial terrain, rebuilds meshes, creates player controller and block interactor, wires hand animation and nameplate, applies a shoulder camera offset with voxel clamp, and returns a `VoxelDemo` API.
   - **Parameters:** `options` (`{ babylon: BabylonApi; scene: SceneLike; camera: CameraLike; input: InputState; getSelectedSlot: () => number; rebuildBudgetPerFrame?: number }`)
   - **Returns:** `VoxelDemo`.
   - **Side effects & dependencies:** Mutates world and scene; generates chunk data; creates Babylon meshes.
@@ -993,6 +1037,24 @@ tests/
   - **Logic:** Returns internal `rebuildCount`.
   - **Parameters:** None.
   - **Returns:** `number`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `VoxelDemo.getWorld(): World`
+  - **Objective:** Expose the voxel world for tests and diagnostics.
+  - **Logic:** Returns the internal world instance.
+  - **Parameters:** None.
+  - **Returns:** `World`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `VoxelDemo.getPlayerState(): PlayerState`
+  - **Objective:** Expose the player state for tests and diagnostics.
+  - **Logic:** Returns the internal player state instance.
+  - **Parameters:** None.
+  - **Returns:** `PlayerState`.
   - **Side effects & dependencies:** None.
   - **Errors/Exceptions:** None.
   - **Performance notes:** O(1).
