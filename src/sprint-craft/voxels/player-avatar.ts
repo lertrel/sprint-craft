@@ -34,6 +34,7 @@ export type PlayerAvatar = {
     swing: { left: number; right: number };
     rightArmPose?: RightArmPose;
   }) => void;
+  setFirstPersonVisibility: (isFirstPerson: boolean) => void;
   getHeadPosition: () => Vec3Like;
   getStandingHeight: () => number;
   dispose: () => void;
@@ -267,6 +268,17 @@ export function createPlayerAvatar(options: {
     lowerArmR.rotation.x = baseRight * RIGHT_ARM_LOWER_SCALE + pose.swing.right * 0.5;
   };
 
+  const setFirstPersonVisibility = (isFirstPerson: boolean) => {
+    const showHeadArms = !isFirstPerson;
+    head.isVisible = showHeadArms;
+    torso.isVisible = showHeadArms;
+    frontMarker.isVisible = showHeadArms;
+    upperArmL.isVisible = showHeadArms;
+    lowerArmL.isVisible = showHeadArms;
+    upperArmR.isVisible = showHeadArms;
+    lowerArmR.isVisible = showHeadArms;
+  };
+
   const getHeadPosition = (): Vec3Like => {
     const stanceHeight =
       currentPose.stance === "standing"
@@ -286,6 +298,7 @@ export function createPlayerAvatar(options: {
   return {
     parts,
     setPose,
+    setFirstPersonVisibility,
     getHeadPosition,
     getStandingHeight: () => STANDING_HEIGHT,
     dispose: () => {

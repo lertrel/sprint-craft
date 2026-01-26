@@ -10,9 +10,14 @@ import { createPlayerAvatar } from "./player-avatar";
 import { createPlayerController, computeEyeHeight } from "./player-controller";
 import { createDefaultPlayerState } from "./player-state";
 import { findSafeSpawnAboveGround } from "./spawn";
-import { createBlockInteractor } from "./block-interaction";
+import { canPlaceBlock, createBlockInteractor } from "./block-interaction";
 import { raycastVoxels } from "./raycast";
 import { createNameplate } from "../ui/nameplate";
+import { getBlockDef, getBlockPreviewColor, getHotbarBlockId } from "./blocks";
+import { createTargeting } from "./targeting";
+import { createTargetHighlight } from "./target-highlight";
+import { createPlacementPreview } from "./placement-preview";
+import { createCameraMode } from "./camera-mode";
 
 export type VoxelDemo = {
   tick: (dtSec: number) => void;
@@ -26,6 +31,8 @@ export type VoxelDemo = {
 
 export const MOVEMENT_KEYS = ["KeyW", "KeyA", "KeyS", "KeyD"] as const;
 export type MovementKey = (typeof MOVEMENT_KEYS)[number];
+export const SHOULDER_ORBIT_MAX_YAW = Math.PI / 3;
+const ANCHOR_UPDATE_MAX_DELTA = 0.01;
 
 const FACING_YAW_OFFSETS: Record<MovementKey, number> = {
   KeyW: 0,
@@ -58,6 +65,20 @@ export function resolveFacingKey(
 export function facingYawFromKey(cameraYaw: number, key: MovementKey | null): number {
   if (!key) return cameraYaw;
   return cameraYaw + FACING_YAW_OFFSETS[key];
+}
+
+function normalizeAngle(angle: number): number {
+  let a = angle;
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a < -Math.PI) a += Math.PI * 2;
+  return a;
+}
+
+function clampShoulderYaw(yaw: number, anchorYaw: number): number {
+  const delta = normalizeAngle(yaw - anchorYaw);
+  if (delta > SHOULDER_ORBIT_MAX_YAW) return anchorYaw + SHOULDER_ORBIT_MAX_YAW;
+  if (delta < -SHOULDER_ORBIT_MAX_YAW) return anchorYaw - SHOULDER_ORBIT_MAX_YAW;
+  return yaw;
 }
 
 export function createVoxelDemo(options: {
@@ -109,6 +130,13 @@ export function createVoxelDemo(options: {
   const handAnimator = createHandAnimator();
   let actionTriggered = false;
   let lastMoveKey: MovementKey | null = null;
+  let shoulderAnchorYaw = camera.rotation?.y ?? 0;
+  const cameraMode = createCameraMode();
+  let lastCameraMode = cameraMode.getMode();
+  const targetMaxDistance = 6;
+  const targeting = createTargeting({ camera, world, maxDistance: targetMaxDistance });
+  const highlight = createTargetHighlight({ babylon, scene });
+  const preview = createPlacementPreview({ babylon, scene });
 
   const interactor = createBlockInteractor({
     input,
@@ -117,6 +145,8 @@ export function createVoxelDemo(options: {
     scheduler,
     player: player.state,
     getSelectedSlot,
+    getTarget: () => targeting.get().hit,
+    maxDistance: targetMaxDistance,
     onAction: () => {
       actionTriggered = true;
     }
@@ -127,12 +157,35 @@ export function createVoxelDemo(options: {
 
   const tick = (dtSec: number) => {
     player.tick(dtSec);
-    interactor.tick(dtSec);
+    cameraMode.toggleIfPressed((code) => input.wasKeyPressed(code));
 
     lastMoveKey = updateLastMovementKey(lastMoveKey, (key) => input.wasKeyPressed(key));
+    const pressedMoveKey = MOVEMENT_KEYS.find((key) => input.wasKeyPressed(key)) ?? null;
     const facingKey = resolveFacingKey(lastMoveKey, (key) => input.isKeyDown(key));
+    const isMoving = MOVEMENT_KEYS.some((key) => input.isKeyDown(key));
 
-    const yaw = camera.rotation?.y ?? 0;
+    const currentMode = cameraMode.getMode();
+    const isFirstPerson = currentMode === "firstPerson";
+    if (currentMode !== lastCameraMode) {
+      if (!isFirstPerson && camera.rotation) {
+        camera.rotation.y = shoulderAnchorYaw;
+      }
+      lastCameraMode = currentMode;
+    }
+
+    let yaw = camera.rotation?.y ?? 0;
+    if (!isFirstPerson) {
+      const clampedYaw = clampShoulderYaw(yaw, shoulderAnchorYaw);
+      if (pressedMoveKey) {
+        const delta = Math.abs(normalizeAngle(clampedYaw - shoulderAnchorYaw));
+        if (delta <= ANCHOR_UPDATE_MAX_DELTA) {
+          shoulderAnchorYaw = clampedYaw;
+        }
+      }
+      yaw = clampedYaw;
+      if (camera.rotation) camera.rotation.y = yaw;
+    }
+
     const avatarYaw = facingYawFromKey(yaw, facingKey);
 
     const forward = { x: Math.sin(yaw), z: Math.cos(yaw) };
@@ -147,39 +200,60 @@ export function createVoxelDemo(options: {
       y: player.state.position.y + eyeHeight,
       z: player.state.position.z
     };
-    const desired = {
-      x: anchor.x + right.x * cameraOffset.right + back.x * cameraOffset.back,
-      y: anchor.y + cameraOffset.up,
-      z: anchor.z + right.z * cameraOffset.right + back.z * cameraOffset.back
-    };
+    if (isFirstPerson) {
+      camera.position.x = anchor.x;
+      camera.position.y = anchor.y;
+      camera.position.z = anchor.z;
+    } else {
+      const desired = {
+        x: anchor.x + right.x * cameraOffset.right + back.x * cameraOffset.back,
+        y: anchor.y + cameraOffset.up,
+        z: anchor.z + right.z * cameraOffset.right + back.z * cameraOffset.back
+      };
 
-    const dir = {
-      x: desired.x - anchor.x,
-      y: desired.y - anchor.y,
-      z: desired.z - anchor.z
-    };
-    const dist = Math.hypot(dir.x, dir.y, dir.z);
-    const norm =
-      dist > 1e-6
-        ? { x: dir.x / dist, y: dir.y / dist, z: dir.z / dist }
-        : { x: 0, y: 0, z: -1 };
+      const dir = {
+        x: desired.x - anchor.x,
+        y: desired.y - anchor.y,
+        z: desired.z - anchor.z
+      };
+      const dist = Math.hypot(dir.x, dir.y, dir.z);
+      const norm =
+        dist > 1e-6
+          ? { x: dir.x / dist, y: dir.y / dist, z: dir.z / dist }
+          : { x: 0, y: 0, z: -1 };
 
-    let targetDistance = dist;
-    if (dist > 0) {
-      const hit = raycastVoxels({
-        origin: anchor,
-        direction: norm,
-        maxDistance: dist,
-        getVoxel: world.getVoxel
-      });
-      if (hit) {
-        targetDistance = Math.max(minCameraDistance, hit.distance - 0.1);
+      let targetDistance = dist;
+      if (dist > 0) {
+        const hit = raycastVoxels({
+          origin: anchor,
+          direction: norm,
+          maxDistance: dist,
+          getVoxel: world.getVoxel
+        });
+        if (hit) {
+          targetDistance = Math.max(minCameraDistance, hit.distance - 0.1);
+        }
       }
+
+      camera.position.x = anchor.x + norm.x * targetDistance;
+      camera.position.y = anchor.y + norm.y * targetDistance;
+      camera.position.z = anchor.z + norm.z * targetDistance;
     }
 
-    camera.position.x = anchor.x + norm.x * targetDistance;
-    camera.position.y = anchor.y + norm.y * targetDistance;
-    camera.position.z = anchor.z + norm.z * targetDistance;
+    const target = targeting.update();
+    highlight.update(target.hit);
+    const previewColor = getBlockPreviewColor(
+      getBlockDef(getHotbarBlockId(getSelectedSlot()))
+    );
+    const canPreview =
+      !!target.placement &&
+      canPlaceBlock({ world, player: player.state, target: target.placement });
+    preview.update({
+      position: canPreview ? target.placement : null,
+      color: previewColor
+    });
+
+    interactor.tick(dtSec);
 
     const moveSpeed = Math.hypot(player.state.velocity.x, player.state.velocity.z);
     const swing = handAnimator.update({
@@ -189,7 +263,6 @@ export function createVoxelDemo(options: {
     });
     actionTriggered = false;
 
-    const isMoving = MOVEMENT_KEYS.some((key) => input.isKeyDown(key));
     const isAiming =
       input.isMouseDown(0) ||
       input.isMouseDown(2) ||
@@ -204,6 +277,7 @@ export function createVoxelDemo(options: {
       swing,
       rightArmPose
     });
+    avatar.setFirstPersonVisibility(isFirstPerson);
 
     const headPos = avatar.getHeadPosition();
     nameplate.setPosition({
@@ -219,6 +293,8 @@ export function createVoxelDemo(options: {
     tick,
     dispose: () => {
       renderer.dispose();
+      highlight.dispose();
+      preview.dispose();
       avatar.dispose();
       nameplate.dispose();
     },

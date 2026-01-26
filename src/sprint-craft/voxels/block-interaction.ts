@@ -3,8 +3,9 @@ import type { InputState } from "../input";
 import { BlockId, getBlockDef, getHotbarBlockId } from "./blocks";
 import { DEFAULT_PLAYER_TUNING } from "./player-controller";
 import type { PlayerState } from "./player-state";
-import { raycastVoxels } from "./raycast";
+import { raycastVoxels, type RaycastHit } from "./raycast";
 import type { ChunkRebuildScheduler } from "./rebuild-scheduler";
+import { getCameraForward, getPlacementTarget, type PlacementTarget } from "./targeting";
 import type { World } from "./world";
 import { aabbIntersectsAabb, makePlayerAabb } from "./voxel-collision";
 
@@ -19,6 +20,7 @@ export type BlockInteractorOptions = {
   scheduler: ChunkRebuildScheduler;
   player: PlayerState;
   getSelectedSlot: () => number;
+  getTarget?: () => RaycastHit | null;
   maxDistance?: number;
   cooldownSec?: number;
   onAction?: (action: "break" | "place") => void;
@@ -27,15 +29,25 @@ export type BlockInteractorOptions = {
 const DEFAULT_MAX_DISTANCE = 6;
 const DEFAULT_COOLDOWN_SEC = 0.2;
 
-function getCameraForward(camera: CameraLike): { x: number; y: number; z: number } {
-  const yaw = camera.rotation?.y ?? 0;
-  const pitch = camera.rotation?.x ?? 0;
-  const cosPitch = Math.cos(pitch);
-  return {
-    x: Math.sin(yaw) * cosPitch,
-    y: -Math.sin(pitch),
-    z: Math.cos(yaw) * cosPitch
+export function canPlaceBlock(options: {
+  world: World;
+  player: PlayerState;
+  target: PlacementTarget;
+}): boolean {
+  const { world, player, target } = options;
+  if (world.getVoxel(target.x, target.y, target.z) !== BlockId.Air) return false;
+
+  const playerHeight = player.colliderHeights[player.stance];
+  const playerAabb = makePlayerAabb({
+    position: player.position,
+    halfWidth: DEFAULT_PLAYER_TUNING.halfWidth,
+    height: playerHeight
+  });
+  const blockAabb = {
+    min: { x: target.x, y: target.y, z: target.z },
+    max: { x: target.x + 1, y: target.y + 1, z: target.z + 1 }
   };
+  return !aabbIntersectsAabb(playerAabb, blockAabb);
 }
 
 export function createBlockInteractor(options: BlockInteractorOptions): BlockInteractor {
@@ -46,6 +58,7 @@ export function createBlockInteractor(options: BlockInteractorOptions): BlockInt
     scheduler,
     player,
     getSelectedSlot,
+    getTarget,
     maxDistance = DEFAULT_MAX_DISTANCE,
     cooldownSec = DEFAULT_COOLDOWN_SEC,
     onAction
@@ -53,13 +66,18 @@ export function createBlockInteractor(options: BlockInteractorOptions): BlockInt
 
   let cooldownRemaining = 0;
 
-  const tryBreak = (): boolean => {
-    const hit = raycastVoxels({
+  const resolveHit = (): RaycastHit | null => {
+    if (getTarget) return getTarget();
+    return raycastVoxels({
       origin: camera.position,
       direction: getCameraForward(camera),
       maxDistance,
       getVoxel: world.getVoxel
     });
+  };
+
+  const tryBreak = (): boolean => {
+    const hit = resolveHit();
     if (!hit) return false;
 
     const id = world.getVoxel(hit.wx, hit.wy, hit.wz);
@@ -72,33 +90,12 @@ export function createBlockInteractor(options: BlockInteractorOptions): BlockInt
   };
 
   const tryPlace = (): boolean => {
-    const hit = raycastVoxels({
-      origin: camera.position,
-      direction: getCameraForward(camera),
-      maxDistance,
-      getVoxel: world.getVoxel
-    });
+    const hit = resolveHit();
     if (!hit) return false;
 
-    const target = {
-      x: hit.wx + hit.face.x,
-      y: hit.wy + hit.face.y,
-      z: hit.wz + hit.face.z
-    };
-
-    if (world.getVoxel(target.x, target.y, target.z) !== BlockId.Air) return false;
-
-    const playerHeight = player.colliderHeights[player.stance];
-    const playerAabb = makePlayerAabb({
-      position: player.position,
-      halfWidth: DEFAULT_PLAYER_TUNING.halfWidth,
-      height: playerHeight
-    });
-    const blockAabb = {
-      min: { x: target.x, y: target.y, z: target.z },
-      max: { x: target.x + 1, y: target.y + 1, z: target.z + 1 }
-    };
-    if (aabbIntersectsAabb(playerAabb, blockAabb)) return false;
+    const target = getPlacementTarget(hit);
+    if (!target) return false;
+    if (!canPlaceBlock({ world, player, target })) return false;
 
     const blockId = getHotbarBlockId(getSelectedSlot());
     world.setVoxel(target.x, target.y, target.z, blockId);

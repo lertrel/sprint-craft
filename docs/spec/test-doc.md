@@ -26,12 +26,15 @@ tests/
   iteration6.unit.test.ts
   iteration7.integration.test.ts
   iteration7.unit.test.ts
+  iteration8.build.test.ts
+  iteration8.integration.test.ts
+  iteration8.unit.test.ts
 ```
 
 ### Counts
 - Folders: 2
-- Files: 15
-- Approximate number of functions in tests: ~280 (regex count of "function" and "=>" tokens in tests)
+- Files: 18
+- Approximate number of functions in tests: ~330 (regex count of "function" and "=>" tokens in tests)
 
 ## Program Document - Test Suite
 **Assumption:** The heading template from sys-doc is reused for tests. Each test case is listed as a function-like entry using its `it("...")` description, plus any helper functions defined in the file.
@@ -42,7 +45,7 @@ tests/
 **Functions:**
 - **Function:** `createFakeBabylon(): { babylon: BabylonApi; getLastEngine: () => FakeEngine | null; getLastScene: () => FakeScene | null; getLastCamera: () => FakeCamera | null }`
   - **Objective:** Construct a stub Babylon API and accessors for the latest engine/scene/camera instances.
-  - **Logic:** Defines internal stub classes (Vector3, Engine, Scene, FreeCamera, HemisphericLight, Color3/Color4, StandardMaterial, Mesh, VertexData, DynamicTexture), tracks the last created engine/scene/camera, and returns a `babylon` object with class constructors plus getter functions.
+  - **Logic:** Defines internal stub classes (Vector3, Engine, Scene, FreeCamera, HemisphericLight, Color3/Color4, StandardMaterial, Mesh, VertexData, DynamicTexture), tracks the last created engine/scene/camera, and exposes mesh visibility/material alpha fields for HUD preview assertions.
   - **Parameters:** None.
   - **Returns:** An object with `babylon` constructors and getters for last created engine/scene/camera.
   - **Side effects & dependencies:** Creates class definitions and maintains module-local tracking state.
@@ -1110,6 +1113,162 @@ tests/
   - **Parameters:** Test callback.
   - **Returns:** `void`.
   - **Side effects & dependencies:** Uses fake Babylon DynamicTexture state.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+### File: `tests/iteration8.build.test.ts`
+**File path:** `tests/iteration8.build.test.ts`
+**Objective:** Unit tests for standalone build-stamp injection and UTC formatting.
+**Functions:**
+- **Function:** `extractStamp(html: string): string`
+  - **Objective:** Extract the build stamp string from generated HTML.
+  - **Logic:** Matches the `#buildStamp` element and returns its inner text.
+  - **Parameters:** `html` (`string`)
+  - **Returns:** `string`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** Throws if the stamp element is missing.
+  - **Performance notes:** O(N) over HTML length.
+
+- **Function:** `stampToUtcMs(stamp: string): number`
+  - **Objective:** Convert a `dd-mm-yyyy:hh.mm.ss` stamp into UTC milliseconds.
+  - **Logic:** Parses the stamp and calls `Date.UTC` with the components.
+  - **Parameters:** `stamp` (`string`)
+  - **Returns:** `number`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** Throws on invalid format.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("inserts a UTC timestamp into standalone outputs", ...)`
+  - **Objective:** Ensure standalone HTML outputs include a UTC build stamp.
+  - **Logic:** Creates a temp standalone layout, runs the generation script in a non-UTC TZ, and asserts the stamp exists, matches the format, and is near current UTC time.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Reads/writes temp files, executes Node process.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(N) file IO and process spawn overhead.
+
+### File: `tests/iteration8.integration.test.ts`
+**File path:** `tests/iteration8.integration.test.ts`
+**Objective:** Integration tests for crosshair/highlight, placement preview, and camera mode toggling.
+**Functions:**
+- **Function:** `makeInput(): { state: StubInputState; api: ... }`
+  - **Objective:** Provide stub input state for camera toggle and interaction tests.
+  - **Logic:** Uses `Set`s for pressed/down keys and mouse buttons; exposes query methods and an `endFrame` reset.
+  - **Parameters:** None.
+  - **Returns:** Stub input state and API.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `setDom(html: string): void`
+  - **Objective:** Install HUD DOM for initApp-based tests.
+  - **Logic:** Sets `document.body.innerHTML` and makes `pointerLockElement` writable.
+  - **Parameters:** `html` (`string`)
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** DOM mutation.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("creates crosshair and target highlight mesh", ...)`
+  - **Objective:** Ensure crosshair element and highlight mesh are created.
+  - **Logic:** Boots app with fake Babylon, checks `#crosshair` and `target:highlight` mesh presence.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** initApp, fake Babylon scene.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("shows highlight and preview when placement is valid", ...)`
+  - **Objective:** Validate highlight/preview visibility and preview transparency.
+  - **Logic:** Creates a demo world, places a target block, ticks, and asserts mesh visibility/position/alpha.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** createVoxelDemo, fake Babylon meshes.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("hides preview when placement would intersect the player", ...)`
+  - **Objective:** Ensure preview is hidden when placement is invalid.
+  - **Logic:** Positions the player so the placement cell overlaps the AABB, ticks, and asserts preview is hidden.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** createVoxelDemo, collision checks.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("toggles to first-person on KeyV and hides head/arms", ...)`
+  - **Objective:** Validate camera mode toggle and avatar visibility rules.
+  - **Logic:** Sends KeyV, ticks demo, and asserts camera position and head/arm/torso visibility.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** createVoxelDemo, fake Babylon meshes.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("clamps shoulder orbit behind the avatar while moving", ...)`
+  - **Objective:** Ensure the shoulder camera cannot orbit to the front of the avatar while moving.
+  - **Logic:** Holds movement input, sets camera yaw to the front, and ticks the demo, asserting the yaw is clamped to the rear arc.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** createVoxelDemo, camera rotation updates.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("keeps the shoulder anchor when moving from a front-facing camera", ...)`
+  - **Objective:** Ensure movement input does not re-anchor the clamp when the camera is already in front.
+  - **Logic:** Presses movement input while facing forward, ticks twice, and asserts the yaw remains clamped to the original rear arc.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** createVoxelDemo, camera rotation updates.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("snaps shoulder yaw back to anchor when leaving first-person", ...)`
+  - **Objective:** Ensure the camera yaw realigns to the shoulder anchor after switching back from first-person.
+  - **Logic:** Switches to first-person, rotates the camera, switches back, and asserts yaw snaps to the anchor.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** createVoxelDemo, camera mode toggling.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+### File: `tests/iteration8.unit.test.ts`
+**File path:** `tests/iteration8.unit.test.ts`
+**Objective:** Unit tests for targeting helpers, placement validation, and camera mode toggling.
+**Functions:**
+- **Function:** `it("computes placement target from hit face", ...)`
+  - **Objective:** Validate placement target computation from a raycast hit.
+  - **Logic:** Calls `getPlacementTarget` and asserts the adjacent coordinates.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("returns hit + placement for a valid raycast", ...)`
+  - **Objective:** Validate targeting update output for a simple world.
+  - **Logic:** Creates a world with a block, updates targeting, and asserts hit/placement values.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** createTargeting, raycastVoxels.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(N) along the ray.
+
+- **Function:** `it("rejects placement when occupied or intersecting the player", ...)`
+  - **Objective:** Validate placement rules for occupied and overlapping cells.
+  - **Logic:** Checks `canPlaceBlock` against occupied and overlapping targets.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** canPlaceBlock, collision helpers.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(V) for collision checks.
+
+- **Function:** `it("toggles mode on KeyV and keeps mode otherwise", ...)`
+  - **Objective:** Validate camera mode toggling behavior.
+  - **Logic:** Calls `toggleIfPressed` with and without KeyV and asserts mode.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** createCameraMode.
   - **Errors/Exceptions:** Assertions may throw.
   - **Performance notes:** O(1).
 
