@@ -24,12 +24,14 @@ tests/
   iteration5.unit.test.ts
   iteration6.integration.test.ts
   iteration6.unit.test.ts
+  iteration7.integration.test.ts
+  iteration7.unit.test.ts
 ```
 
 ### Counts
 - Folders: 2
-- Files: 13
-- Approximate number of functions in tests: ~244 (regex count of "function" and "=>" tokens in tests)
+- Files: 15
+- Approximate number of functions in tests: ~264 (regex count of "function" and "=>" tokens in tests)
 
 ## Program Document - Test Suite
 **Assumption:** The heading template from sys-doc is reused for tests. Each test case is listed as a function-like entry using its `it("...")` description, plus any helper functions defined in the file.
@@ -992,6 +994,95 @@ tests/
   - **Parameters:** Test callback.
   - **Returns:** `void`.
   - **Side effects & dependencies:** Uses `createHandAnimator`.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+### File: `tests/iteration7.integration.test.ts`
+**File path:** `tests/iteration7.integration.test.ts`
+**Objective:** Integration tests for Iteration 7 avatar facing, front marker, and right arm pose.
+**Functions:**
+- **Function:** `setDom(html: string): void`
+  - **Objective:** Install HUD DOM and allow pointerLockElement mutation.
+  - **Logic:** Sets HTML and makes `pointerLockElement` writable.
+  - **Parameters:** `html` (`string`)
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** DOM mutation.
+  - **Errors/Exceptions:** None explicit.
+  - **Performance notes:** O(1).
+
+- **Function:** `baseHudDom(): string`
+  - **Objective:** Provide HUD markup including brand splash and HUD slots.
+  - **Logic:** Returns template string with canvas and HUD elements.
+  - **Parameters:** None.
+  - **Returns:** `string`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("creates a front marker and enables edge rendering when supported", ...)`
+  - **Objective:** Ensure the front marker mesh exists and edge rendering flags are set.
+  - **Logic:** Boots app with fake Babylon, checks created meshes and edge flags.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Uses fake Babylon mesh creation and edge flags.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("aligns facing to camera yaw and updates right arm pose on movement", ...)`
+  - **Objective:** Verify idle yaw alignment and right arm base pose change on movement.
+  - **Logic:** Sets camera yaw, ticks render loop, inspects torso yaw; dispatches KeyW and checks right arm rotation update.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** DOM events, fake Babylon mesh state.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+### File: `tests/iteration7.unit.test.ts`
+**File path:** `tests/iteration7.unit.test.ts`
+**Objective:** Unit tests for Iteration 7 facing rules, right-arm swing constraints, and nameplate styling.
+**Functions:**
+- **Function:** `it("uses the most recently pressed movement key when multiple are held", ...)`
+  - **Objective:** Validate facing selection uses the most recently pressed key.
+  - **Logic:** Simulates pressed/down sets, updates last key, and asserts facing resolution.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Uses facing helpers.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("maps facing keys to camera yaw offsets", ...)`
+  - **Objective:** Ensure facing yaw offsets are correct for each key.
+  - **Logic:** Calls `facingYawFromKey` for W/A/S/D and checks offsets.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** None beyond helper calls.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("keeps right arm swing at zero while walking", ...)`
+  - **Objective:** Ensure walking swing does not affect the right arm.
+  - **Logic:** Updates animator with movement and asserts right swing is zero.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Uses `createHandAnimator`.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("triggers right arm swing on action", ...)`
+  - **Objective:** Ensure action triggers produce right arm swing.
+  - **Logic:** Calls animator update with actionTriggered and asserts right swing.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Uses `createHandAnimator`.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("uses transparent background and bright red text", ...)`
+  - **Objective:** Validate nameplate draw parameters for color and transparency.
+  - **Logic:** Creates a nameplate with fake Babylon and inspects drawText args.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Uses fake Babylon DynamicTexture state.
   - **Errors/Exceptions:** Assertions may throw.
   - **Performance notes:** O(1).
 
