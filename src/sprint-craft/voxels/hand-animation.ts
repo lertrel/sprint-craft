@@ -50,7 +50,7 @@ export function createHandAnimator(): HandAnimator {
     const walkSwing = Math.sin(walkPhase) * WALK_SWING_AMPLITUDE * speedNorm;
     swing = {
       left: walkSwing,
-      right: -walkSwing + actionSwing
+      right: actionSwing
     };
     return swing;
   };

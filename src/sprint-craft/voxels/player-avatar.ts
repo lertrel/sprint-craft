@@ -14,6 +14,7 @@ type MeshLike = {
 export type PlayerAvatarParts = {
   head: MeshLike;
   torso: MeshLike;
+  frontMarker: MeshLike;
   upperArmL: MeshLike;
   lowerArmL: MeshLike;
   upperArmR: MeshLike;
@@ -31,21 +32,30 @@ export type PlayerAvatar = {
     yaw: number;
     stance: PlayerStance;
     swing: { left: number; right: number };
+    rightArmPose?: RightArmPose;
   }) => void;
   getHeadPosition: () => Vec3Like;
   getStandingHeight: () => number;
   dispose: () => void;
 };
 
+export type RightArmPose = "idle" | "forward";
+
 const DIMENSIONS = {
   head: { w: 0.35, h: 0.3, d: 0.35 },
   torso: { w: 0.5, h: 0.6, d: 0.3 },
   arm: { w: 0.18, h: 0.35, d: 0.18 },
-  leg: { w: 0.2, h: 0.45, d: 0.2 }
+  leg: { w: 0.2, h: 0.45, d: 0.2 },
+  marker: { w: 0.14, h: 0.14, d: 0.06 }
 };
 
 const STANDING_HEIGHT =
   DIMENSIONS.leg.h * 2 + DIMENSIONS.torso.h + DIMENSIONS.head.h;
+export const RIGHT_ARM_POSE_ANGLES: Record<RightArmPose, number> = {
+  idle: 0,
+  forward: -1.1
+};
+const RIGHT_ARM_LOWER_SCALE = 0.6;
 
 export function createPlayerAvatar(options: {
   babylon: BabylonApi;
@@ -75,7 +85,46 @@ export function createPlayerAvatar(options: {
         })()
       : null;
 
-  const makeBox = (name: string, size: { w: number; h: number; d: number }, parent?: MeshLike) => {
+  const markerMaterial =
+    "StandardMaterial" in babylon
+      ? (() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const mat = new (babylon as any).StandardMaterial("playerFrontMat", scene as any);
+          if ("Color3" in babylon) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (mat as any).diffuseColor = new (babylon as any).Color3(1, 0.2, 0.2);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (mat as any).emissiveColor = new (babylon as any).Color3(1, 0.2, 0.2);
+          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (mat as any).disableLighting = false;
+          return mat as unknown;
+        })()
+      : null;
+
+  const applyEdgeRendering = (mesh: MeshLike) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const m = mesh as any;
+    if (typeof m.enableEdgesRendering === "function") {
+      m.enableEdgesRendering();
+      if ("edgesWidth" in m) m.edgesWidth = 1.4;
+      if ("edgesColor" in m) {
+        if ("Color4" in babylon) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          m.edgesColor = new (babylon as any).Color4(0, 0, 0, 1);
+        } else {
+          m.edgesColor = { r: 0, g: 0, b: 0, a: 1 };
+        }
+      }
+    }
+  };
+
+  const makeBox = (
+    name: string,
+    size: { w: number; h: number; d: number },
+    parent?: MeshLike,
+    materialOverride?: unknown
+  ) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mesh = createBox(
       name,
@@ -85,16 +134,19 @@ export function createPlayerAvatar(options: {
     if (!mesh.position) mesh.position = { x: 0, y: 0, z: 0 };
     if (!mesh.rotation) mesh.rotation = { x: 0, y: 0, z: 0 };
     if (!mesh.scaling) mesh.scaling = { x: 1, y: 1, z: 1 };
-    if (material) {
+    const appliedMaterial = materialOverride ?? material;
+    if (appliedMaterial) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (mesh as any).material = material as any;
+      (mesh as any).material = appliedMaterial as any;
     }
     if (parent) mesh.parent = parent;
+    applyEdgeRendering(mesh);
     return mesh;
   };
 
   const head = makeBox("player:head", DIMENSIONS.head);
   const torso = makeBox("player:torso", DIMENSIONS.torso);
+  const frontMarker = makeBox("player:frontMarker", DIMENSIONS.marker, undefined, markerMaterial);
   const upperArmL = makeBox("player:upperArmL", DIMENSIONS.arm);
   const lowerArmL = makeBox("player:lowerArmL", DIMENSIONS.arm);
   const upperArmR = makeBox("player:upperArmR", DIMENSIONS.arm);
@@ -108,6 +160,7 @@ export function createPlayerAvatar(options: {
   const torsoCenterY = legTotal + DIMENSIONS.torso.h / 2;
   const headCenterY = legTotal + DIMENSIONS.torso.h + DIMENSIONS.head.h / 2;
   const shoulderY = legTotal + DIMENSIONS.torso.h - 0.05;
+  const markerZ = DIMENSIONS.torso.d / 2 + DIMENSIONS.marker.d / 2 + 0.02;
 
   const armX = DIMENSIONS.torso.w / 2 + DIMENSIONS.arm.w / 2 + 0.05;
   const legX = DIMENSIONS.torso.w / 2 - DIMENSIONS.leg.w / 2 - 0.05;
@@ -119,6 +172,7 @@ export function createPlayerAvatar(options: {
   const basePositions: Record<keyof PlayerAvatarParts, Vec3Like> = {
     head: { x: 0, y: headCenterY, z: 0 },
     torso: { x: 0, y: torsoCenterY, z: 0 },
+    frontMarker: { x: 0, y: torsoCenterY + 0.05, z: markerZ },
     upperArmL: { x: -armX, y: shoulderY - DIMENSIONS.arm.h / 2, z: 0 },
     lowerArmL: { x: -armX, y: lowerArmY, z: 0 },
     upperArmR: { x: armX, y: shoulderY - DIMENSIONS.arm.h / 2, z: 0 },
@@ -132,6 +186,7 @@ export function createPlayerAvatar(options: {
   const parts: PlayerAvatarParts = {
     head,
     torso,
+    frontMarker,
     upperArmL,
     lowerArmL,
     upperArmR,
@@ -168,6 +223,7 @@ export function createPlayerAvatar(options: {
     yaw: number;
     stance: PlayerStance;
     swing: { left: number; right: number };
+    rightArmPose?: RightArmPose;
   }) => {
     const stanceHeight =
       pose.stance === "standing"
@@ -181,6 +237,7 @@ export function createPlayerAvatar(options: {
 
     applyScale(head, basePositions.head, scaleY, pose.yaw, pose.position);
     applyScale(torso, basePositions.torso, scaleY, pose.yaw, pose.position);
+    applyScale(frontMarker, basePositions.frontMarker, scaleY, pose.yaw, pose.position);
     applyScale(upperArmL, basePositions.upperArmL, scaleY, pose.yaw, pose.position);
     applyScale(upperArmR, basePositions.upperArmR, scaleY, pose.yaw, pose.position);
     applyScale(lowerArmL, basePositions.lowerArmL, scaleY, pose.yaw, pose.position);
@@ -192,6 +249,7 @@ export function createPlayerAvatar(options: {
 
     head.rotation.y = pose.yaw;
     torso.rotation.y = pose.yaw;
+    frontMarker.rotation.y = pose.yaw;
     upperArmL.rotation.y = pose.yaw;
     upperArmR.rotation.y = pose.yaw;
     lowerArmL.rotation.y = pose.yaw;
@@ -202,9 +260,11 @@ export function createPlayerAvatar(options: {
     lowerLegR.rotation.y = pose.yaw;
 
     upperArmL.rotation.x = pose.swing.left;
-    upperArmR.rotation.x = pose.swing.right;
+    const rightArmPose = pose.rightArmPose ?? "idle";
+    const baseRight = RIGHT_ARM_POSE_ANGLES[rightArmPose];
+    upperArmR.rotation.x = baseRight + pose.swing.right;
     lowerArmL.rotation.x = pose.swing.left * 0.5;
-    lowerArmR.rotation.x = pose.swing.right * 0.5;
+    lowerArmR.rotation.x = baseRight * RIGHT_ARM_LOWER_SCALE + pose.swing.right * 0.5;
   };
 
   const getHeadPosition = (): Vec3Like => {
@@ -233,6 +293,8 @@ export function createPlayerAvatar(options: {
       for (const mesh of all) mesh.dispose?.();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (material as any)?.dispose?.();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (markerMaterial as any)?.dispose?.();
     }
   };
 }

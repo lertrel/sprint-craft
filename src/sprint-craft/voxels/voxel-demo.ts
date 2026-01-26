@@ -24,6 +24,42 @@ export type VoxelDemo = {
   getPlayerState: () => ReturnType<typeof createDefaultPlayerState>;
 };
 
+export const MOVEMENT_KEYS = ["KeyW", "KeyA", "KeyS", "KeyD"] as const;
+export type MovementKey = (typeof MOVEMENT_KEYS)[number];
+
+const FACING_YAW_OFFSETS: Record<MovementKey, number> = {
+  KeyW: 0,
+  KeyS: Math.PI,
+  KeyA: -Math.PI / 2,
+  KeyD: Math.PI / 2
+};
+
+export function updateLastMovementKey(
+  lastKey: MovementKey | null,
+  wasPressed: (key: MovementKey) => boolean
+): MovementKey | null {
+  let next = lastKey;
+  for (const key of MOVEMENT_KEYS) {
+    if (wasPressed(key)) next = key;
+  }
+  return next;
+}
+
+export function resolveFacingKey(
+  lastKey: MovementKey | null,
+  isDown: (key: MovementKey) => boolean
+): MovementKey | null {
+  const held = MOVEMENT_KEYS.filter((key) => isDown(key));
+  if (held.length === 0) return null;
+  if (lastKey && isDown(lastKey)) return lastKey;
+  return held[0];
+}
+
+export function facingYawFromKey(cameraYaw: number, key: MovementKey | null): number {
+  if (!key) return cameraYaw;
+  return cameraYaw + FACING_YAW_OFFSETS[key];
+}
+
 export function createVoxelDemo(options: {
   babylon: BabylonApi;
   scene: SceneLike;
@@ -72,6 +108,7 @@ export function createVoxelDemo(options: {
   const nameplate = createNameplate({ babylon, scene, text: "<User 1>" });
   const handAnimator = createHandAnimator();
   let actionTriggered = false;
+  let lastMoveKey: MovementKey | null = null;
 
   const interactor = createBlockInteractor({
     input,
@@ -92,7 +129,12 @@ export function createVoxelDemo(options: {
     player.tick(dtSec);
     interactor.tick(dtSec);
 
+    lastMoveKey = updateLastMovementKey(lastMoveKey, (key) => input.wasKeyPressed(key));
+    const facingKey = resolveFacingKey(lastMoveKey, (key) => input.isKeyDown(key));
+
     const yaw = camera.rotation?.y ?? 0;
+    const avatarYaw = facingYawFromKey(yaw, facingKey);
+
     const forward = { x: Math.sin(yaw), z: Math.cos(yaw) };
     const right = { x: Math.cos(yaw), z: -Math.sin(yaw) };
     const back = { x: -forward.x, z: -forward.z };
@@ -147,11 +189,20 @@ export function createVoxelDemo(options: {
     });
     actionTriggered = false;
 
+    const isMoving = MOVEMENT_KEYS.some((key) => input.isKeyDown(key));
+    const isAiming =
+      input.isMouseDown(0) ||
+      input.isMouseDown(2) ||
+      input.wasMousePressed(0) ||
+      input.wasMousePressed(2);
+    const rightArmPose = isMoving || isAiming ? "forward" : "idle";
+
     avatar.setPose({
       position: player.state.position,
-      yaw,
+      yaw: avatarYaw,
       stance: player.state.stance,
-      swing
+      swing,
+      rightArmPose
     });
 
     const headPos = avatar.getHeadPosition();
