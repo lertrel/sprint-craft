@@ -141,9 +141,12 @@ export function createFakeBabylon(): {
     scene: any;
     useVertexColor = false;
     disableLighting = false;
+    alpha = 1;
+    wireframe = false;
     useAlphaFromDiffuseTexture = false;
     backFaceCulling = true;
     diffuseTexture: DynamicTexture | null = null;
+    diffuseColor: Color3 | null = null;
     emissiveColor: Color3 | null = null;
     specularColor: Color3 | null = null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -171,6 +174,7 @@ export function createFakeBabylon(): {
     parent: Mesh | null = null;
     billboardMode = 0;
     isPickable = true;
+    isVisible = true;
     edgesEnabled = false;
     edgesWidth = 0;
     edgesColor: Color4 | { r: number; g: number; b: number; a: number } | null = null;
