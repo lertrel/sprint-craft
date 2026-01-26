@@ -52,7 +52,7 @@ export function resolveFacingKey(
   const held = MOVEMENT_KEYS.filter((key) => isDown(key));
   if (held.length === 0) return null;
   if (lastKey && isDown(lastKey)) return lastKey;
-  return held[0];
+  return held[0] ?? null;
 }
 
 export function facingYawFromKey(cameraYaw: number, key: MovementKey | null): number {
