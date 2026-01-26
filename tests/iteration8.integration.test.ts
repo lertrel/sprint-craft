@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { initApp } from "../src/sprint-craft/app";
 import { BlockId } from "../src/sprint-craft/voxels/blocks";
-import { createVoxelDemo } from "../src/sprint-craft/voxels/voxel-demo";
+import { createVoxelDemo, SHOULDER_ORBIT_MAX_YAW } from "../src/sprint-craft/voxels/voxel-demo";
 import { createFakeBabylon } from "./fakes/fake-babylon";
 
 type StubInputState = {
@@ -57,6 +57,13 @@ function baseHudDom() {
       </div>
     </div>
   `;
+}
+
+function normalizeAngle(angle: number) {
+  let a = angle;
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a < -Math.PI) a += Math.PI * 2;
+  return a;
 }
 
 describe("Iteration 8: crosshair + highlight (integration)", () => {
@@ -199,6 +206,40 @@ describe("Iteration 8: camera mode toggle + avatar visibility (integration)", ()
     demo.tick(1 / 60);
     input.api.endFrame();
     expect(head?.isVisible).toBe(true);
+
+    demo.dispose();
+  });
+
+  it("clamps shoulder orbit behind the avatar when idle", () => {
+    const { babylon } = createFakeBabylon();
+    const canvas = document.createElement("canvas");
+    const engine = new babylon.Engine(canvas, true);
+    const scene = new babylon.Scene(engine);
+    const camera = new babylon.FreeCamera("cam", new babylon.Vector3(0, 0, 0), scene);
+    const input = makeInput();
+
+    const demo = createVoxelDemo({
+      babylon,
+      scene,
+      camera: camera as any,
+      input: input.api as any,
+      getSelectedSlot: () => 1,
+      rebuildBudgetPerFrame: 0
+    });
+
+    const player = demo.getPlayerState();
+    player.position = { x: 0.5, y: 20, z: 0.5 };
+    player.velocity = { x: 0, y: 0, z: 0 };
+    player.stance = "standing";
+
+    camera.rotation.y = 0;
+    demo.tick(1 / 60);
+
+    camera.rotation.y = Math.PI;
+    demo.tick(1 / 60);
+
+    const delta = Math.abs(normalizeAngle(camera.rotation.y - 0));
+    expect(delta).toBeLessThanOrEqual(SHOULDER_ORBIT_MAX_YAW + 1e-4);
 
     demo.dispose();
   });

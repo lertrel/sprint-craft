@@ -31,6 +31,7 @@ export type VoxelDemo = {
 
 export const MOVEMENT_KEYS = ["KeyW", "KeyA", "KeyS", "KeyD"] as const;
 export type MovementKey = (typeof MOVEMENT_KEYS)[number];
+export const SHOULDER_ORBIT_MAX_YAW = Math.PI * 0.75;
 
 const FACING_YAW_OFFSETS: Record<MovementKey, number> = {
   KeyW: 0,
@@ -63,6 +64,20 @@ export function resolveFacingKey(
 export function facingYawFromKey(cameraYaw: number, key: MovementKey | null): number {
   if (!key) return cameraYaw;
   return cameraYaw + FACING_YAW_OFFSETS[key];
+}
+
+function normalizeAngle(angle: number): number {
+  let a = angle;
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a < -Math.PI) a += Math.PI * 2;
+  return a;
+}
+
+function clampShoulderYaw(yaw: number, anchorYaw: number): number {
+  const delta = normalizeAngle(yaw - anchorYaw);
+  if (delta > SHOULDER_ORBIT_MAX_YAW) return anchorYaw + SHOULDER_ORBIT_MAX_YAW;
+  if (delta < -SHOULDER_ORBIT_MAX_YAW) return anchorYaw - SHOULDER_ORBIT_MAX_YAW;
+  return yaw;
 }
 
 export function createVoxelDemo(options: {
@@ -114,6 +129,7 @@ export function createVoxelDemo(options: {
   const handAnimator = createHandAnimator();
   let actionTriggered = false;
   let lastMoveKey: MovementKey | null = null;
+  let shoulderAnchorYaw = camera.rotation?.y ?? 0;
   const cameraMode = createCameraMode();
   const targetMaxDistance = 6;
   const targeting = createTargeting({ camera, world, maxDistance: targetMaxDistance });
@@ -143,8 +159,19 @@ export function createVoxelDemo(options: {
 
     lastMoveKey = updateLastMovementKey(lastMoveKey, (key) => input.wasKeyPressed(key));
     const facingKey = resolveFacingKey(lastMoveKey, (key) => input.isKeyDown(key));
+    const isMoving = MOVEMENT_KEYS.some((key) => input.isKeyDown(key));
 
-    const yaw = camera.rotation?.y ?? 0;
+    let yaw = camera.rotation?.y ?? 0;
+    const isFirstPerson = cameraMode.getMode() === "firstPerson";
+    if (!isFirstPerson) {
+      if (isMoving) {
+        shoulderAnchorYaw = yaw;
+      } else {
+        yaw = clampShoulderYaw(yaw, shoulderAnchorYaw);
+        if (camera.rotation) camera.rotation.y = yaw;
+      }
+    }
+
     const avatarYaw = facingYawFromKey(yaw, facingKey);
 
     const forward = { x: Math.sin(yaw), z: Math.cos(yaw) };
@@ -159,7 +186,6 @@ export function createVoxelDemo(options: {
       y: player.state.position.y + eyeHeight,
       z: player.state.position.z
     };
-    const isFirstPerson = cameraMode.getMode() === "firstPerson";
     if (isFirstPerson) {
       camera.position.x = anchor.x;
       camera.position.y = anchor.y;
@@ -223,7 +249,6 @@ export function createVoxelDemo(options: {
     });
     actionTriggered = false;
 
-    const isMoving = MOVEMENT_KEYS.some((key) => input.isKeyDown(key));
     const isAiming =
       input.isMouseDown(0) ||
       input.isMouseDown(2) ||

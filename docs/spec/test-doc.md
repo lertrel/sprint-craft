@@ -1173,6 +1173,15 @@ tests/
   - **Errors/Exceptions:** Assertions may throw.
   - **Performance notes:** O(1).
 
+- **Function:** `it("clamps shoulder orbit behind the avatar when idle", ...)`
+  - **Objective:** Ensure the shoulder camera cannot orbit to the front of the avatar.
+  - **Logic:** Sets camera yaw to the front and ticks the demo, asserting the yaw is clamped to the rear arc.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** createVoxelDemo, camera rotation updates.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
 ### File: `tests/iteration8.unit.test.ts`
 **File path:** `tests/iteration8.unit.test.ts`
 **Objective:** Unit tests for targeting helpers, placement validation, and camera mode toggling.

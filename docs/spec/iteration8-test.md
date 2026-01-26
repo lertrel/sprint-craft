@@ -29,7 +29,12 @@ Acceptance Criteria 4 (Camera mode toggles with KeyV):
     Step 1: Press `V` once and confirm the camera switches to first-person view.
     Step 2: Press `V` again and confirm the camera returns to over-the-shoulder view.
 
-Acceptance Criteria 5 (Avatar visibility rules in first-person):
+Acceptance Criteria 5 (Shoulder orbit rear-arc clamp):
+  Test Case 1
+    Step 1: In over-the-shoulder view, rotate the camera around the avatar.
+    Step 2: Confirm the camera cannot orbit to directly face the avatar's front.
+
+Acceptance Criteria 6 (Avatar visibility rules in first-person):
   Test Case 1
     Step 1: Switch to first-person view (press `V`).
     Step 2: Confirm the avatar head and arms are hidden.

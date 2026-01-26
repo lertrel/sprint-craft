@@ -68,7 +68,13 @@ This spec turns Iteration 8 activities into implementable, testable requirements
      - Switching to third-person restores the shoulder offset.
      - With a blocking voxel behind the player, camera distance is reduced.
 
-4. **Avatar visibility rules**
+4. **Shoulder orbit rear-arc clamp**
+   - **What to develop**: Prevent the shoulder camera from orbiting to the front of the avatar by clamping yaw to a rear arc.
+   - **Definition of done**: While idle in shoulder mode, camera yaw cannot exceed the rear arc limits.
+   - **Acceptance criteria (integration-testable)**:
+     - When camera yaw is rotated past the front, it is clamped to the configured rear-arc limit.
+
+5. **Avatar visibility rules**
    - **What to develop**: Hide head and arms in first-person mode; restore visibility in third-person.
    - **Definition of done**: Avatar visibility updates immediately on mode toggle.
    - **Acceptance criteria (integration-testable)**:
