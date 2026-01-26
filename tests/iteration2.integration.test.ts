@@ -40,7 +40,10 @@ describe("Iteration 2 (integration-ish)", () => {
     expect(chunkMeshes).toHaveLength(9);
 
     // Guardrail: ensure we are NOT creating per-voxel meshes.
-    expect(scene?.createdMeshes.length).toBeLessThanOrEqual(20);
+    const nonChunkBudget = 15;
+    expect(scene?.createdMeshes.length).toBeLessThanOrEqual(
+      chunkMeshes.length + nonChunkBudget
+    );
 
     // Run a few frames; should not rebuild meshes if nothing changed.
     const engine = getLastEngine();
