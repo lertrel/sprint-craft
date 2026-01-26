@@ -26,14 +26,15 @@ tests/
   iteration6.unit.test.ts
   iteration7.integration.test.ts
   iteration7.unit.test.ts
+  iteration8.build.test.ts
   iteration8.integration.test.ts
   iteration8.unit.test.ts
 ```
 
 ### Counts
 - Folders: 2
-- Files: 17
-- Approximate number of functions in tests: ~305 (regex count of "function" and "=>" tokens in tests)
+- Files: 18
+- Approximate number of functions in tests: ~330 (regex count of "function" and "=>" tokens in tests)
 
 ## Program Document - Test Suite
 **Assumption:** The heading template from sys-doc is reused for tests. Each test case is listed as a function-like entry using its `it("...")` description, plus any helper functions defined in the file.
@@ -1115,6 +1116,37 @@ tests/
   - **Errors/Exceptions:** Assertions may throw.
   - **Performance notes:** O(1).
 
+### File: `tests/iteration8.build.test.ts`
+**File path:** `tests/iteration8.build.test.ts`
+**Objective:** Unit tests for standalone build-stamp injection and UTC formatting.
+**Functions:**
+- **Function:** `extractStamp(html: string): string`
+  - **Objective:** Extract the build stamp string from generated HTML.
+  - **Logic:** Matches the `#buildStamp` element and returns its inner text.
+  - **Parameters:** `html` (`string`)
+  - **Returns:** `string`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** Throws if the stamp element is missing.
+  - **Performance notes:** O(N) over HTML length.
+
+- **Function:** `stampToUtcMs(stamp: string): number`
+  - **Objective:** Convert a `dd-mm-yyyy:hh.mm.ss` stamp into UTC milliseconds.
+  - **Logic:** Parses the stamp and calls `Date.UTC` with the components.
+  - **Parameters:** `stamp` (`string`)
+  - **Returns:** `number`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** Throws on invalid format.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("inserts a UTC timestamp into standalone outputs", ...)`
+  - **Objective:** Ensure standalone HTML outputs include a UTC build stamp.
+  - **Logic:** Creates a temp standalone layout, runs the generation script in a non-UTC TZ, and asserts the stamp exists, matches the format, and is near current UTC time.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Reads/writes temp files, executes Node process.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(N) file IO and process spawn overhead.
+
 ### File: `tests/iteration8.integration.test.ts`
 **File path:** `tests/iteration8.integration.test.ts`
 **Objective:** Integration tests for crosshair/highlight, placement preview, and camera mode toggling.
@@ -1179,6 +1211,24 @@ tests/
   - **Parameters:** Test callback.
   - **Returns:** `void`.
   - **Side effects & dependencies:** createVoxelDemo, camera rotation updates.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("keeps the shoulder anchor when moving from a front-facing camera", ...)`
+  - **Objective:** Ensure movement input does not re-anchor the clamp when the camera is already in front.
+  - **Logic:** Presses movement input while facing forward, ticks twice, and asserts the yaw remains clamped to the original rear arc.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** createVoxelDemo, camera rotation updates.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("snaps shoulder yaw back to anchor when leaving first-person", ...)`
+  - **Objective:** Ensure the camera yaw realigns to the shoulder anchor after switching back from first-person.
+  - **Logic:** Switches to first-person, rotates the camera, switches back, and asserts yaw snaps to the anchor.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** createVoxelDemo, camera mode toggling.
   - **Errors/Exceptions:** Assertions may throw.
   - **Performance notes:** O(1).
 

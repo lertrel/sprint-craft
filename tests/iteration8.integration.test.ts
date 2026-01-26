@@ -250,4 +250,86 @@ describe("Iteration 8: camera mode toggle + avatar visibility (integration)", ()
 
     demo.dispose();
   });
+
+  it("keeps the shoulder anchor when moving from a front-facing camera", () => {
+    const { babylon } = createFakeBabylon();
+    const canvas = document.createElement("canvas");
+    const engine = new babylon.Engine(canvas, true);
+    const scene = new babylon.Scene(engine);
+    const camera = new babylon.FreeCamera("cam", new babylon.Vector3(0, 0, 0), scene);
+    const input = makeInput();
+
+    const demo = createVoxelDemo({
+      babylon,
+      scene,
+      camera: camera as any,
+      input: input.api as any,
+      getSelectedSlot: () => 1,
+      rebuildBudgetPerFrame: 0
+    });
+
+    const player = demo.getPlayerState();
+    player.position = { x: 0.5, y: 20, z: 0.5 };
+    player.velocity = { x: 0, y: 0, z: 0 };
+    player.stance = "standing";
+
+    camera.rotation.y = 0;
+    demo.tick(1 / 60);
+
+    camera.rotation.y = Math.PI;
+    input.state.keysPressed.add("KeyW");
+    input.state.keysDown.add("KeyW");
+    demo.tick(1 / 60);
+    input.api.endFrame();
+    input.state.keysDown.delete("KeyW");
+
+    camera.rotation.y = Math.PI;
+    demo.tick(1 / 60);
+
+    const delta = Math.abs(normalizeAngle(camera.rotation.y - 0));
+    expect(delta).toBeLessThanOrEqual(SHOULDER_ORBIT_MAX_YAW + 1e-4);
+
+    demo.dispose();
+  });
+
+  it("snaps shoulder yaw back to anchor when leaving first-person", () => {
+    const { babylon } = createFakeBabylon();
+    const canvas = document.createElement("canvas");
+    const engine = new babylon.Engine(canvas, true);
+    const scene = new babylon.Scene(engine);
+    const camera = new babylon.FreeCamera("cam", new babylon.Vector3(0, 0, 0), scene);
+    const input = makeInput();
+
+    const demo = createVoxelDemo({
+      babylon,
+      scene,
+      camera: camera as any,
+      input: input.api as any,
+      getSelectedSlot: () => 1,
+      rebuildBudgetPerFrame: 0
+    });
+
+    const player = demo.getPlayerState();
+    player.position = { x: 0.5, y: 20, z: 0.5 };
+    player.velocity = { x: 0, y: 0, z: 0 };
+    player.stance = "standing";
+
+    camera.rotation.y = 0;
+    demo.tick(1 / 60);
+
+    input.state.keysPressed.add("KeyV");
+    demo.tick(1 / 60);
+    input.api.endFrame();
+
+    camera.rotation.y = Math.PI;
+
+    input.state.keysPressed.add("KeyV");
+    demo.tick(1 / 60);
+    input.api.endFrame();
+
+    const delta = Math.abs(normalizeAngle(camera.rotation.y - 0));
+    expect(delta).toBeLessThanOrEqual(1e-4);
+
+    demo.dispose();
+  });
 });
