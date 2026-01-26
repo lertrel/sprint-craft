@@ -32,6 +32,7 @@ export type VoxelDemo = {
 export const MOVEMENT_KEYS = ["KeyW", "KeyA", "KeyS", "KeyD"] as const;
 export type MovementKey = (typeof MOVEMENT_KEYS)[number];
 export const SHOULDER_ORBIT_MAX_YAW = Math.PI / 3;
+const ANCHOR_UPDATE_MAX_DELTA = 0.01;
 
 const FACING_YAW_OFFSETS: Record<MovementKey, number> = {
   KeyW: 0,
@@ -129,7 +130,6 @@ export function createVoxelDemo(options: {
   const handAnimator = createHandAnimator();
   let actionTriggered = false;
   let lastMoveKey: MovementKey | null = null;
-  let lastFacingKey: MovementKey | null = null;
   let shoulderAnchorYaw = camera.rotation?.y ?? 0;
   const cameraMode = createCameraMode();
   let lastCameraMode = cameraMode.getMode();
@@ -160,25 +160,28 @@ export function createVoxelDemo(options: {
     cameraMode.toggleIfPressed((code) => input.wasKeyPressed(code));
 
     lastMoveKey = updateLastMovementKey(lastMoveKey, (key) => input.wasKeyPressed(key));
+    const pressedMoveKey = MOVEMENT_KEYS.find((key) => input.wasKeyPressed(key)) ?? null;
     const facingKey = resolveFacingKey(lastMoveKey, (key) => input.isKeyDown(key));
     const isMoving = MOVEMENT_KEYS.some((key) => input.isKeyDown(key));
 
     const currentMode = cameraMode.getMode();
     const isFirstPerson = currentMode === "firstPerson";
-    if (!isFirstPerson && facingKey && facingKey !== lastFacingKey) {
-      shoulderAnchorYaw = facingYawFromKey(shoulderAnchorYaw, facingKey);
-    }
     if (currentMode !== lastCameraMode) {
       if (!isFirstPerson && camera.rotation) {
         camera.rotation.y = shoulderAnchorYaw;
       }
       lastCameraMode = currentMode;
     }
-    lastFacingKey = facingKey;
 
     let yaw = camera.rotation?.y ?? 0;
     if (!isFirstPerson) {
       const clampedYaw = clampShoulderYaw(yaw, shoulderAnchorYaw);
+      if (pressedMoveKey) {
+        const delta = Math.abs(normalizeAngle(clampedYaw - shoulderAnchorYaw));
+        if (delta <= ANCHOR_UPDATE_MAX_DELTA) {
+          shoulderAnchorYaw = clampedYaw;
+        }
+      }
       yaw = clampedYaw;
       if (camera.rotation) camera.rotation.y = yaw;
     }
