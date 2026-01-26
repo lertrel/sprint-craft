@@ -16,6 +16,7 @@ src/
     app.ts
     input.ts
     ui/
+      crosshair.ts
       hotbar.ts
       mouse-look.ts
       nameplate.ts
@@ -24,6 +25,7 @@ src/
     voxels/
       block-interaction.ts
       blocks.ts
+      camera-mode.ts
       chunk.ts
       chunk-renderer.ts
       generation.ts
@@ -32,12 +34,15 @@ src/
       meshing/
         mesh-types.ts
         mesher.ts
+      placement-preview.ts
       player-avatar.ts
       player-controller.ts
       player-state.ts
       raycast.ts
       rebuild-scheduler.ts
       spawn.ts
+      target-highlight.ts
+      targeting.ts
       voxel-collision.ts
       voxel-demo.ts
       world.ts
@@ -68,8 +73,8 @@ tests/
 
 ### Counts
 - Folders: 8 (src: 6, tests: 2)
-- Files: 43 (src: 28, tests: 15)
-- Approximate number of functions in src: ~259 (regex count of "function" and "=>" tokens in src)
+- Files: 50 (src: 33, tests: 17)
+- Approximate number of functions in src: ~278 (regex count of "function" and "=>" tokens in src)
 
 ## Program Document - Core Game Function
 **Assumption:** The exact heading template requested was not provided in the prompt; the format below uses the required bold labels (File path, Objective, Function, Objective, Logic, Parameters, Returns, Side effects & dependencies, Errors/Exceptions, Performance notes).
@@ -101,7 +106,7 @@ tests/
 
 - **Function:** `initApp(options: InitAppOptions): AppHandle`
   - **Objective:** Create the full game runtime: HUD, input, camera, world, render loop, and cleanup hooks.
-  - **Logic:** Validates HUD elements, builds toast/hotbar, creates input state, configures pointer lock and mouse look, wires the branding splash hide-on-first-input behavior, instantiates Babylon engine/scene/camera, sets camera parameters, creates the voxel demo, starts the render loop with delta time calculation, installs resize and visibility handlers, optionally creates debug lighting, and returns an `AppHandle` with `dispose`.
+  - **Logic:** Validates HUD elements, builds toast/hotbar/crosshair, creates input state, configures pointer lock and mouse look, wires the branding splash hide-on-first-input behavior, instantiates Babylon engine/scene/camera, sets camera parameters, creates the voxel demo, starts the render loop with delta time calculation, installs resize and visibility handlers, optionally creates debug lighting, and returns an `AppHandle` with `dispose`.
   - **Parameters:** `options` (`{ babylon: BabylonApi; canvas: HTMLCanvasElement; document: Document; window: Window; enableDebugGround?: boolean; onLog?: (msg: string) => void }`)
   - **Returns:** `AppHandle` - `{ engine, scene, camera, input, getFrameCount, dispose }`.
   - **Side effects & dependencies:** DOM queries and mutations, event listeners for pointer lock, focus/blur, visibility, resize; creates Babylon engine/scene/camera; starts render loop; calls `console.info`.
@@ -353,6 +358,19 @@ tests/
   - **Errors/Exceptions:** None.
   - **Performance notes:** O(1).
 
+### File: `src/sprint-craft/ui/crosshair.ts`
+**File path:** `src/sprint-craft/ui/crosshair.ts`
+**Objective:** Provide a lightweight HUD crosshair element for targeting feedback.
+**Functions:**
+- **Function:** `createCrosshair(options: { document: Document; container?: HTMLElement | null }): CrosshairHandle`
+  - **Objective:** Create or reuse the `#crosshair` element inside the HUD.
+  - **Logic:** Reuses an existing element when present; otherwise creates one, sets `pointer-events: none`, and appends it to the container or document body.
+  - **Parameters:** `options` (`{ document: Document; container?: HTMLElement | null }`)
+  - **Returns:** `CrosshairHandle` - exposes `element` and `dispose`.
+  - **Side effects & dependencies:** Mutates the DOM; may append a new element.
+  - **Errors/Exceptions:** None explicit.
+  - **Performance notes:** O(1).
+
 ### File: `src/sprint-craft/ui/nameplate.ts`
 **File path:** `src/sprint-craft/ui/nameplate.ts`
 **Objective:** Create a billboarded nameplate mesh with dynamic text.
@@ -419,25 +437,34 @@ tests/
   - **Errors/Exceptions:** None.
   - **Performance notes:** O(1).
 
+- **Function:** `getBlockPreviewColor(def: BlockDef): Rgba01`
+  - **Objective:** Provide a consistent translucent color for placement previews.
+  - **Logic:** Returns the block's base color plus a fixed alpha value.
+  - **Parameters:** `def` (`BlockDef`)
+  - **Returns:** `Rgba01` - RGBA tuple in 0..1.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
 ### File: `src/sprint-craft/voxels/block-interaction.ts`
 **File path:** `src/sprint-craft/voxels/block-interaction.ts`
 **Objective:** Handle block breaking and placement based on player input and raycasting.
 **Functions:**
-- **Function:** `getCameraForward(camera: CameraLike): { x: number; y: number; z: number }`
-  - **Objective:** Compute a forward direction vector from camera yaw/pitch.
-  - **Logic:** Uses `sin`/`cos` of yaw and pitch to form a normalized forward vector in world space.
-  - **Parameters:** `camera` (`CameraLike`)
-  - **Returns:** `{ x: number; y: number; z: number }` - forward direction.
-  - **Side effects & dependencies:** Reads camera rotation.
+- **Function:** `canPlaceBlock(options: { world: World; player: PlayerState; target: PlacementTarget }): boolean`
+  - **Objective:** Validate that a placement cell is air and does not intersect the player AABB.
+  - **Logic:** Checks target voxel is air, builds player and block AABBs, and rejects overlaps.
+  - **Parameters:** `options` (`{ world: World; player: PlayerState; target: PlacementTarget }`)
+  - **Returns:** `boolean` - true when placement is allowed.
+  - **Side effects & dependencies:** Reads world voxels; uses collision helpers.
   - **Errors/Exceptions:** None.
-  - **Performance notes:** O(1).
+  - **Performance notes:** O(V) for nearby voxel checks.
 
 - **Function:** `createBlockInteractor(options: BlockInteractorOptions): BlockInteractor`
   - **Objective:** Create a per-frame block interaction controller (break/place).
-  - **Logic:** Tracks a cooldown, raycasts from the camera to find target blocks, breaks solid blocks on LMB, places blocks on RMB (if air and not intersecting the player AABB), and schedules chunk rebuilds for changed voxels.
-  - **Parameters:** `options` (`{ input: InputState; camera: CameraLike; world: World; scheduler: ChunkRebuildScheduler; player: PlayerState; getSelectedSlot: () => number; maxDistance?: number; cooldownSec?: number; onAction?: (action: "break" | "place") => void }`)
+  - **Logic:** Tracks a cooldown, uses a shared target when provided (or raycasts from the camera), breaks solid blocks on LMB, places blocks on RMB (if air and not intersecting the player AABB), and schedules chunk rebuilds for changed voxels.
+  - **Parameters:** `options` (`{ input: InputState; camera: CameraLike; world: World; scheduler: ChunkRebuildScheduler; player: PlayerState; getSelectedSlot: () => number; getTarget?: () => RaycastHit | null; maxDistance?: number; cooldownSec?: number; onAction?: (action: "break" | "place") => void }`)
   - **Returns:** `BlockInteractor` - exposes `tick`.
-  - **Side effects & dependencies:** Reads input; mutates world voxels; enqueues chunk rebuilds; depends on raycast and collision helpers.
+  - **Side effects & dependencies:** Reads input; mutates world voxels; enqueues chunk rebuilds; depends on targeting and collision helpers.
   - **Errors/Exceptions:** None explicit.
   - **Performance notes:** Per-tick raycasts and AABB checks; cost depends on `maxDistance`.
 
@@ -449,6 +476,76 @@ tests/
   - **Side effects & dependencies:** Reads input; may mutate world and scheduler through internal helpers.
   - **Errors/Exceptions:** None.
   - **Performance notes:** O(1) plus raycast when actions are triggered.
+
+### File: `src/sprint-craft/voxels/camera-mode.ts`
+**File path:** `src/sprint-craft/voxels/camera-mode.ts`
+**Objective:** Track camera mode state and handle KeyV toggles.
+**Functions:**
+- **Function:** `createCameraMode(options?: { initialMode?: CameraMode }): CameraModeHandle`
+  - **Objective:** Manage first-person vs shoulder camera state.
+  - **Logic:** Stores a mode string, toggles on KeyV when requested, and exposes getters/setters.
+  - **Parameters:** `options` (`{ initialMode?: CameraMode }`, optional)
+  - **Returns:** `CameraModeHandle` - exposes `getMode`, `setMode`, `toggle`, and `toggleIfPressed`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+### File: `src/sprint-craft/voxels/targeting.ts`
+**File path:** `src/sprint-craft/voxels/targeting.ts`
+**Objective:** Produce shared raycast targeting results for highlight, preview, and interactions.
+**Functions:**
+- **Function:** `getCameraForward(camera: CameraLike): Vec3`
+  - **Objective:** Compute a forward direction vector from camera yaw/pitch.
+  - **Logic:** Uses `sin`/`cos` of yaw and pitch to form a normalized forward vector in world space.
+  - **Parameters:** `camera` (`CameraLike`)
+  - **Returns:** `Vec3` - forward direction vector.
+  - **Side effects & dependencies:** Reads camera rotation.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `getPlacementTarget(hit: RaycastHit | null): PlacementTarget | null`
+  - **Objective:** Compute the adjacent placement cell from a raycast hit.
+  - **Logic:** Offsets hit coordinates by the face normal to get the placement cell.
+  - **Parameters:** `hit` (`RaycastHit | null`)
+  - **Returns:** `PlacementTarget | null`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `createTargeting(options: { camera: CameraLike; world: World; maxDistance?: number }): TargetingHandle`
+  - **Objective:** Cache per-frame raycast results for reuse.
+  - **Logic:** Raycasts from the camera each update, stores the hit and placement target, and exposes the latest result.
+  - **Parameters:** `options` (`{ camera: CameraLike; world: World; maxDistance?: number }`)
+  - **Returns:** `TargetingHandle` - exposes `update` and `get`.
+  - **Side effects & dependencies:** Reads camera state; queries world voxels.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(N) per update, where N is voxels traversed.
+
+### File: `src/sprint-craft/voxels/target-highlight.ts`
+**File path:** `src/sprint-craft/voxels/target-highlight.ts`
+**Objective:** Visualize the currently targeted voxel with a single highlight mesh.
+**Functions:**
+- **Function:** `createTargetHighlight(options: { babylon: BabylonApi; scene: SceneLike }): TargetHighlightHandle`
+  - **Objective:** Create and manage a target highlight mesh.
+  - **Logic:** Builds a slightly oversized box mesh, enables edges when supported, and toggles visibility/position on updates.
+  - **Parameters:** `options` (`{ babylon: BabylonApi; scene: SceneLike }`)
+  - **Returns:** `TargetHighlightHandle` - exposes `update`, `dispose`, and `meshName`.
+  - **Side effects & dependencies:** Creates Babylon mesh/material; mutates mesh transforms.
+  - **Errors/Exceptions:** Throws if `MeshBuilder.CreateBox` is missing.
+  - **Performance notes:** O(1) per update.
+
+### File: `src/sprint-craft/voxels/placement-preview.ts`
+**File path:** `src/sprint-craft/voxels/placement-preview.ts`
+**Objective:** Render a transparent ghost block for valid placement previews.
+**Functions:**
+- **Function:** `createPlacementPreview(options: { babylon: BabylonApi; scene: SceneLike }): PlacementPreviewHandle`
+  - **Objective:** Create and manage the placement preview mesh.
+  - **Logic:** Builds a box mesh with a transparent material, updates visibility/position, and applies preview colors.
+  - **Parameters:** `options` (`{ babylon: BabylonApi; scene: SceneLike }`)
+  - **Returns:** `PlacementPreviewHandle` - exposes `update`, `dispose`, and `meshName`.
+  - **Side effects & dependencies:** Creates Babylon mesh/material; mutates mesh transforms and material alpha.
+  - **Errors/Exceptions:** Throws if `MeshBuilder.CreateBox` is missing.
+  - **Performance notes:** O(1) per update.
 
 ### File: `src/sprint-craft/voxels/chunk.ts`
 **File path:** `src/sprint-craft/voxels/chunk.ts`
@@ -657,9 +754,9 @@ tests/
 **Functions:**
 - **Function:** `createPlayerAvatar(options: { babylon: BabylonApi; scene: SceneLike }): PlayerAvatar`
   - **Objective:** Construct head, torso, arms, and legs as Babylon primitives and expose pose controls.
-  - **Logic:** Builds meshes (including a front marker), applies proportional placement, enables edge rendering when available, updates positions/rotations per pose (including right arm base pose), and returns a handle for updates.
+  - **Logic:** Builds meshes (including a front marker), applies proportional placement, enables edge rendering when available, updates positions/rotations per pose (including right arm base pose), and exposes first-person visibility controls for head/arms.
   - **Parameters:** `options` (`{ babylon: BabylonApi; scene: SceneLike }`)
-  - **Returns:** `PlayerAvatar` - exposes `setPose`, `getHeadPosition`, `getStandingHeight`, and `dispose`.
+  - **Returns:** `PlayerAvatar` - exposes `setPose`, `setFirstPersonVisibility`, `getHeadPosition`, `getStandingHeight`, and `dispose`.
   - **Side effects & dependencies:** Creates Babylon meshes/materials; updates mesh transforms each tick.
   - **Errors/Exceptions:** Throws if `MeshBuilder.CreateBox` is missing.
   - **Performance notes:** O(1) per pose update; mesh creation is constant-time.
@@ -991,7 +1088,7 @@ tests/
 **Functions:**
 - **Function:** `createVoxelDemo(options: { babylon: BabylonApi; scene: SceneLike; camera: CameraLike; input: InputState; getSelectedSlot: () => number; rebuildBudgetPerFrame?: number }): VoxelDemo`
   - **Objective:** Initialize the voxel world, renderer, player controller, avatar, and per-frame tick behavior.
-  - **Logic:** Creates world, scheduler, renderer, generates initial terrain, rebuilds meshes, creates player controller and block interactor, tracks movement-facing key for avatar yaw, wires hand animation and nameplate, applies right-arm pose rules, clamps shoulder camera offset, and returns a `VoxelDemo` API.
+  - **Logic:** Creates world, scheduler, renderer, generates initial terrain, rebuilds meshes, creates player controller and block interactor, tracks movement-facing key for avatar yaw, wires hand animation and nameplate, adds shared targeting with highlight/preview, applies camera mode switching (KeyV) and shoulder clamp, and returns a `VoxelDemo` API.
   - **Parameters:** `options` (`{ babylon: BabylonApi; scene: SceneLike; camera: CameraLike; input: InputState; getSelectedSlot: () => number; rebuildBudgetPerFrame?: number }`)
   - **Returns:** `VoxelDemo`.
   - **Side effects & dependencies:** Mutates world and scene; generates chunk data; creates Babylon meshes.
@@ -1000,7 +1097,7 @@ tests/
 
 - **Function:** `VoxelDemo.tick(dtSec: number): void`
   - **Objective:** Advance player and world systems each frame.
-  - **Logic:** Calls `player.tick`, `interactor.tick`, and rebuilds a limited number of chunks.
+  - **Logic:** Advances player simulation, applies camera mode placement, updates targeting/highlight/preview, processes interactions, updates avatar/nameplate, and rebuilds a limited number of chunks.
   - **Parameters:** `dtSec` (`number`)
   - **Returns:** `void`.
   - **Side effects & dependencies:** Mutates world and player; may update meshes.
