@@ -164,7 +164,7 @@ export function createVoxelDemo(options: {
 
     let yaw = camera.rotation?.y ?? 0;
     if (pressedMoveKey) {
-      shoulderAnchorYaw = facingYawFromKey(yaw, pressedMoveKey);
+      shoulderAnchorYaw = yaw;
     }
     const isFirstPerson = cameraMode.getMode() === "firstPerson";
     if (!isFirstPerson) {
