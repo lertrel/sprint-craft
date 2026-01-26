@@ -1,10 +1,10 @@
 Theme: MVP2 - Preparation for multi-player phase (continue)
 Goals:
-- Make Avatar's edges clearer
-- Differentiate front and back of avatar
-- When press W avatar's front should be face toward the moving direction
-- When press S avatar's back should be face toward the moving direction
-- When press S avatar's left side should be face toward the moving direction
-- When press D avatar's right side should be face toward the moving direction
-- One of avatar right arm should always point to the front and only. Trigger an arm swing when a break/place action succeeds for this arm. 
-- Make avatar name tag on its head have no background, keep text; change text color to bright red
+- Interaction feedback (crosshair, target outline, placement preview)
+Purpose: Improve usability for break/place actions with a clear targeting cue and optional ghost preview of the placed block.
+Risks: Per-frame highlight updates may add overhead; overlays could conflict with HUD readability.
+Other Important Remarks: Reuse existing raycast results; keep visuals simple and deterministic for tests.
+- Camera mode toggle with avatar visibility rules
+Purpose: Allow switching between over-shoulder and first-person views while preserving collision/clamp behavior.
+Risks: Camera clipping, animation alignment issues, and inconsistent stance/eye height between modes.
+Other Important Remarks: Leverage current player controller eye-height logic; hide head/arms in first-person to prevent obstruction.
