@@ -62,12 +62,14 @@ tests/
   iteration5.unit.test.ts
   iteration6.integration.test.ts
   iteration6.unit.test.ts
+  iteration7.integration.test.ts
+  iteration7.unit.test.ts
 ```
 
 ### Counts
 - Folders: 8 (src: 6, tests: 2)
-- Files: 41 (src: 28, tests: 13)
-- Approximate number of functions in src: ~247 (regex count of "function" and "=>" tokens in src)
+- Files: 43 (src: 28, tests: 15)
+- Approximate number of functions in src: ~259 (regex count of "function" and "=>" tokens in src)
 
 ## Program Document - Core Game Function
 **Assumption:** The exact heading template requested was not provided in the prompt; the format below uses the required bold labels (File path, Objective, Function, Objective, Logic, Parameters, Returns, Side effects & dependencies, Errors/Exceptions, Performance notes).
@@ -357,7 +359,7 @@ tests/
 **Functions:**
 - **Function:** `createNameplate(options: { babylon: BabylonApi; scene: SceneLike; text: string; name?: string }): NameplateHandle`
   - **Objective:** Build a plane mesh with a dynamic texture for the player nameplate.
-  - **Logic:** Creates a plane, attaches a dynamic texture to a material, draws text, enables billboarding, and returns a handle for updates.
+  - **Logic:** Creates a plane, attaches a dynamic texture with alpha, draws bright-red text on a transparent background, enables billboarding, and returns a handle for updates.
   - **Parameters:** `options` (`{ babylon: BabylonApi; scene: SceneLike; text: string; name?: string }`)
   - **Returns:** `NameplateHandle` - exposes `setText`, `setPosition`, `dispose`, and `meshName`.
   - **Side effects & dependencies:** Creates Babylon mesh/material/texture; mutates mesh position.
@@ -642,7 +644,7 @@ tests/
 **Functions:**
 - **Function:** `createHandAnimator(): HandAnimator`
   - **Objective:** Create a stateful animator for walk-cycle and action-triggered swings.
-  - **Logic:** Tracks walk phase and action timer, computes left/right swing angles based on movement speed and action triggers.
+  - **Logic:** Tracks walk phase and action timer, computes left-arm walk swing based on movement speed and right-arm action swing only on triggers.
   - **Parameters:** None.
   - **Returns:** `HandAnimator` - exposes `update` and `getState`.
   - **Side effects & dependencies:** Maintains internal timers and swing state.
@@ -655,7 +657,7 @@ tests/
 **Functions:**
 - **Function:** `createPlayerAvatar(options: { babylon: BabylonApi; scene: SceneLike }): PlayerAvatar`
   - **Objective:** Construct head, torso, arms, and legs as Babylon primitives and expose pose controls.
-  - **Logic:** Builds meshes, applies proportional placement, updates positions/rotations per pose, and returns handle for updates.
+  - **Logic:** Builds meshes (including a front marker), applies proportional placement, enables edge rendering when available, updates positions/rotations per pose (including right arm base pose), and returns a handle for updates.
   - **Parameters:** `options` (`{ babylon: BabylonApi; scene: SceneLike }`)
   - **Returns:** `PlayerAvatar` - exposes `setPose`, `getHeadPosition`, `getStandingHeight`, and `dispose`.
   - **Side effects & dependencies:** Creates Babylon meshes/materials; updates mesh transforms each tick.
@@ -989,7 +991,7 @@ tests/
 **Functions:**
 - **Function:** `createVoxelDemo(options: { babylon: BabylonApi; scene: SceneLike; camera: CameraLike; input: InputState; getSelectedSlot: () => number; rebuildBudgetPerFrame?: number }): VoxelDemo`
   - **Objective:** Initialize the voxel world, renderer, player controller, avatar, and per-frame tick behavior.
-  - **Logic:** Creates world, scheduler, renderer, generates initial terrain, rebuilds meshes, creates player controller and block interactor, wires hand animation and nameplate, applies a shoulder camera offset with voxel clamp, and returns a `VoxelDemo` API.
+  - **Logic:** Creates world, scheduler, renderer, generates initial terrain, rebuilds meshes, creates player controller and block interactor, tracks movement-facing key for avatar yaw, wires hand animation and nameplate, applies right-arm pose rules, clamps shoulder camera offset, and returns a `VoxelDemo` API.
   - **Parameters:** `options` (`{ babylon: BabylonApi; scene: SceneLike; camera: CameraLike; input: InputState; getSelectedSlot: () => number; rebuildBudgetPerFrame?: number }`)
   - **Returns:** `VoxelDemo`.
   - **Side effects & dependencies:** Mutates world and scene; generates chunk data; creates Babylon meshes.
