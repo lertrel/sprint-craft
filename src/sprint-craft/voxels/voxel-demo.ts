@@ -163,12 +163,13 @@ export function createVoxelDemo(options: {
     const isMoving = MOVEMENT_KEYS.some((key) => input.isKeyDown(key));
 
     let yaw = camera.rotation?.y ?? 0;
-    if (pressedMoveKey) {
-      shoulderAnchorYaw = yaw;
-    }
     const isFirstPerson = cameraMode.getMode() === "firstPerson";
     if (!isFirstPerson) {
-      yaw = clampShoulderYaw(yaw, shoulderAnchorYaw);
+      const clampedYaw = clampShoulderYaw(yaw, shoulderAnchorYaw);
+      if (pressedMoveKey) {
+        shoulderAnchorYaw = clampedYaw;
+      }
+      yaw = clampedYaw;
       if (camera.rotation) camera.rotation.y = yaw;
     }
 
