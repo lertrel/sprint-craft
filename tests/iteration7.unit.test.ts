@@ -39,8 +39,8 @@ describe("Iteration 7: facing selection (unit)", () => {
     const yaw = 0.5;
     expect(facingYawFromKey(yaw, "KeyW")).toBeCloseTo(yaw, 5);
     expect(facingYawFromKey(yaw, "KeyS")).toBeCloseTo(yaw + Math.PI, 5);
-    expect(facingYawFromKey(yaw, "KeyA")).toBeCloseTo(yaw - Math.PI / 2, 5);
-    expect(facingYawFromKey(yaw, "KeyD")).toBeCloseTo(yaw + Math.PI / 2, 5);
+    expect(facingYawFromKey(yaw, "KeyA")).toBeCloseTo(yaw + Math.PI / 2, 5);
+    expect(facingYawFromKey(yaw, "KeyD")).toBeCloseTo(yaw - Math.PI / 2, 5);
   });
 });
 

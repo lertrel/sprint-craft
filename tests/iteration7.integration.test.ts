@@ -67,7 +67,7 @@ describe("Iteration 7: facing rules + right arm pose (integration)", () => {
 
     window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyA" }));
     engine?.renderLoop?.();
-    expect(torso?.rotation.y).toBeCloseTo(-Math.PI / 2, 4);
+    expect(torso?.rotation.y).toBeCloseTo(Math.PI / 2, 4);
 
     window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyA" }));
     engine?.renderLoop?.();

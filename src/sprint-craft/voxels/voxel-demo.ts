@@ -30,8 +30,8 @@ export type MovementKey = (typeof MOVEMENT_KEYS)[number];
 const FACING_YAW_OFFSETS: Record<MovementKey, number> = {
   KeyW: 0,
   KeyS: Math.PI,
-  KeyA: -Math.PI / 2,
-  KeyD: Math.PI / 2
+  KeyA: Math.PI / 2,
+  KeyD: -Math.PI / 2
 };
 
 export function updateLastMovementKey(
