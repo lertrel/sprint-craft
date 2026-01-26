@@ -29,6 +29,26 @@ Activity 5 - Validation updates for new orientation/arm/nameplate rules
 - Risks: Visual cues are hard to assert; may need deterministic hooks for tests.
 - Other Important Remarks: Prefer deterministic state for assertions (facing key/yaw, arm pose, text color).
 
+Activity 6 - Interaction feedback HUD (crosshair + target highlight)
+- Purpose: Provide a clear aiming cue and highlight the targeted block for break/place.
+- Risks: Per-frame highlight updates may add overhead; highlight may reduce readability in cluttered scenes.
+- Other Important Remarks: Reuse existing raycast results; keep highlight deterministic and testable.
+
+Activity 7 - Placement preview (ghost block) aligned to target face
+- Purpose: Show the exact block placement location before placing.
+- Risks: Ghost mesh could be mistaken for a real block; must hide preview when placement is invalid.
+- Other Important Remarks: Drive preview from shared targeting data and hotbar selection.
+
+Activity 8 - Camera mode toggle with avatar visibility rules (KeyV)
+- Purpose: Switch between over-shoulder and first-person views without changing movement/collision behavior.
+- Risks: Camera clipping, abrupt transitions, or obstructed first-person view.
+- Other Important Remarks: Toggle on KeyV; hide head/arms in first-person to prevent obstruction.
+
+Activity 9 - Validation updates for interaction feedback and camera modes
+- Purpose: Add unit and integration tests for targeting feedback, preview behavior, and camera toggle rules.
+- Risks: Visual cues are hard to assert; tests may need deterministic hooks for state and mesh visibility.
+- Other Important Remarks: Prefer inspecting mesh names/visibility and draw parameters via fake Babylon.
+
 ## Design
 
 Activity 1 - Avatar visual clarity and front/back differentiation
@@ -66,6 +86,52 @@ Activity 5 - Validation updates for new orientation/arm/nameplate rules
 - UPDATE: /workspace/tests/fakes/fake-babylon.ts
   - Add minimal hooks to capture nameplate draw parameters and optional edge rendering flags.
 
+Activity 6 - Interaction feedback HUD (crosshair + target highlight)
+- NEW: /workspace/src/sprint-craft/ui/crosshair.ts
+  - Add a DOM-based crosshair element with a deterministic id.
+- NEW: /workspace/src/sprint-craft/voxels/targeting.ts
+  - Centralize raycast targeting results for reuse across systems.
+- NEW: /workspace/src/sprint-craft/voxels/target-highlight.ts
+  - Create a single highlight mesh updated from targeting results.
+- UPDATE: /workspace/src/sprint-craft/app.ts
+  - Wire the crosshair into the HUD during initialization.
+- UPDATE: /workspace/src/sprint-craft/voxels/voxel-demo.ts
+  - Update targeting per tick and drive highlight visibility and position.
+- UPDATE: /workspace/src/sprint-craft/voxels/block-interaction.ts
+  - Share or accept precomputed target data to avoid duplicate raycasts.
+- TEST: Integration test asserts crosshair exists and highlight mesh toggles visibility.
+
+Activity 7 - Placement preview (ghost block) aligned to target face
+- NEW: /workspace/src/sprint-craft/voxels/placement-preview.ts
+  - Create a ghost block mesh with transparent material and deterministic name.
+- UPDATE: /workspace/src/sprint-craft/voxels/voxel-demo.ts
+  - Update preview each tick from targeting results and hotbar selection.
+- UPDATE: /workspace/src/sprint-craft/voxels/block-interaction.ts
+  - Reuse placement validity checks for preview and placement.
+- UPDATE: /workspace/src/sprint-craft/voxels/blocks.ts
+  - Provide a helper for preview colors (alpha or tint).
+- TEST: Unit/integration tests verify preview visibility and suppression on invalid placement.
+
+Activity 8 - Camera mode toggle with avatar visibility rules (KeyV)
+- NEW: /workspace/src/sprint-craft/voxels/camera-mode.ts
+  - Track camera mode state and toggle on KeyV.
+- UPDATE: /workspace/src/sprint-craft/voxels/voxel-demo.ts
+  - Apply first-person vs shoulder camera positioning; toggle on KeyV.
+- UPDATE: /workspace/src/sprint-craft/voxels/player-avatar.ts
+  - Hide head/arms in first-person and restore in third-person.
+- UPDATE: /workspace/src/sprint-craft/ui/toast.ts (or app.ts)
+  - Optional toast on camera mode changes.
+- TEST: Integration test toggles KeyV and asserts camera position and avatar visibility.
+
+Activity 9 - Validation updates for interaction feedback and camera modes
+- NEW: /workspace/tests/iteration8.unit.test.ts
+  - Targeting, placement validity, and camera mode state tests.
+- NEW: /workspace/tests/iteration8.integration.test.ts
+  - Crosshair/highlight/preview and camera toggle behavior.
+- UPDATE: /workspace/tests/fakes/fake-babylon.ts
+  - Add mesh visibility and material alpha hooks for highlight and preview.
+- TEST: Manual test list for interaction feedback and camera modes.
+
 ## Iteration Plan
 
 Iteration 7
@@ -74,3 +140,11 @@ Iteration 7
 - Update right arm pose rules (down idle, forward while moving/aiming, action-only swing).
 - Fix nameplate visuals (transparent background, bright red text).
 - Add unit and integration tests for new facing/arm/nameplate behavior.
+
+Iteration 8
+- Implement shared targeting (single raycast result) and HUD crosshair.
+- Add target highlight mesh with deterministic visibility updates.
+- Add placement preview (ghost block) tied to target + hotbar selection; suppress when invalid.
+- Implement camera mode toggle on KeyV (first-person vs shoulder), reusing clamp logic in third-person.
+- Apply avatar visibility rules (hide head/arms in first-person).
+- Add Iteration 8 unit + integration tests and expand fake Babylon hooks as needed.
