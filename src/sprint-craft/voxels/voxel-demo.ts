@@ -131,6 +131,7 @@ export function createVoxelDemo(options: {
   let lastMoveKey: MovementKey | null = null;
   let shoulderAnchorYaw = camera.rotation?.y ?? 0;
   const cameraMode = createCameraMode();
+  let lastCameraMode = cameraMode.getMode();
   const targetMaxDistance = 6;
   const targeting = createTargeting({ camera, world, maxDistance: targetMaxDistance });
   const highlight = createTargetHighlight({ babylon, scene });
@@ -158,17 +159,25 @@ export function createVoxelDemo(options: {
     cameraMode.toggleIfPressed((code) => input.wasKeyPressed(code));
 
     lastMoveKey = updateLastMovementKey(lastMoveKey, (key) => input.wasKeyPressed(key));
-    const pressedMoveKey = MOVEMENT_KEYS.find((key) => input.wasKeyPressed(key)) ?? null;
     const facingKey = resolveFacingKey(lastMoveKey, (key) => input.isKeyDown(key));
     const isMoving = MOVEMENT_KEYS.some((key) => input.isKeyDown(key));
 
+    const currentMode = cameraMode.getMode();
+    const isFirstPerson = currentMode === "firstPerson";
+    const horizontalSpeed = Math.hypot(player.state.velocity.x, player.state.velocity.z);
+    if (!isFirstPerson && horizontalSpeed > 0.01) {
+      shoulderAnchorYaw = Math.atan2(player.state.velocity.x, player.state.velocity.z);
+    }
+    if (currentMode !== lastCameraMode) {
+      if (!isFirstPerson && camera.rotation) {
+        camera.rotation.y = shoulderAnchorYaw;
+      }
+      lastCameraMode = currentMode;
+    }
+
     let yaw = camera.rotation?.y ?? 0;
-    const isFirstPerson = cameraMode.getMode() === "firstPerson";
     if (!isFirstPerson) {
       const clampedYaw = clampShoulderYaw(yaw, shoulderAnchorYaw);
-      if (pressedMoveKey) {
-        shoulderAnchorYaw = clampedYaw;
-      }
       yaw = clampedYaw;
       if (camera.rotation) camera.rotation.y = yaw;
     }

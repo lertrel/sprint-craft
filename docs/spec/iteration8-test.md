@@ -39,3 +39,10 @@ Acceptance Criteria 6 (Avatar visibility rules in first-person):
     Step 1: Switch to first-person view (press `V`).
     Step 2: Confirm the avatar head, arms, and torso are hidden.
     Step 3: Switch back to over-the-shoulder view and confirm the head and arms are visible again.
+
+Acceptance Criteria 7 (Standalone build stamp):
+  Test Case 1
+    Step 1: Run `npm run build:standalone`.
+    Step 2: Open `standalone/index.html` in a browser.
+    Step 3: Confirm a small timestamp is visible at the bottom right.
+    Step 4: Verify the format is `dd-mm-yyyy:hh.mm.ss` and reflects UTC.

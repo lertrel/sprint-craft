@@ -101,6 +101,17 @@ This spec turns Iteration 8 activities into implementable, testable requirements
 
 ---
 
+## Activity 5: Standalone build stamp (UTC)
+
+1. **Build stamp injection**
+   - **What to develop**: Add a build timestamp stamp to standalone output only, shown at bottom-right.
+   - **Definition of done**: Standalone HTML outputs include the stamp, dev HTML remains unchanged.
+   - **Acceptance criteria (manual-testable)**:
+     - `standalone/index.html` and `standalone/sprint-craft.single.html` contain a visible stamp.
+     - Stamp format is `dd-mm-yyyy:hh.mm.ss` and uses UTC time.
+
+---
+
 ## Definition of Done (Iteration 8)
 - All Activity acceptance criteria are met.
 - Unit and integration tests exist and pass.
