@@ -37,5 +37,5 @@ Acceptance Criteria 5 (Shoulder orbit rear-arc clamp):
 Acceptance Criteria 6 (Avatar visibility rules in first-person):
   Test Case 1
     Step 1: Switch to first-person view (press `V`).
-    Step 2: Confirm the avatar head and arms are hidden.
+    Step 2: Confirm the avatar head, arms, and torso are hidden.
     Step 3: Switch back to over-the-shoulder view and confirm the head and arms are visible again.

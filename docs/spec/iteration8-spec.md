@@ -73,12 +73,13 @@ This spec turns Iteration 8 activities into implementable, testable requirements
    - **Definition of done**: While idle in shoulder mode, camera yaw cannot exceed the rear arc limits.
    - **Acceptance criteria (integration-testable)**:
      - When camera yaw is rotated past the front, it is clamped to the configured rear-arc limit.
+     - With movement input held, camera yaw is still clamped to the rear arc.
 
 5. **Avatar visibility rules**
-   - **What to develop**: Hide head and arms in first-person mode; restore visibility in third-person.
+   - **What to develop**: Hide head, arms, and torso in first-person mode; restore visibility in third-person.
    - **Definition of done**: Avatar visibility updates immediately on mode toggle.
    - **Acceptance criteria (integration-testable)**:
-     - Head/arms are hidden in first-person mode.
+     - Head/arms/torso are hidden in first-person mode.
      - Head/arms are visible in third-person mode.
 
 ---

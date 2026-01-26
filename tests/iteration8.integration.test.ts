@@ -196,9 +196,11 @@ describe("Iteration 8: camera mode toggle + avatar visibility (integration)", ()
 
     const sceneRef = getLastScene();
     const head = sceneRef?.createdMeshObjects.find((m) => m.name === "player:head");
+    const torso = sceneRef?.createdMeshObjects.find((m) => m.name === "player:torso");
     const upperArmL = sceneRef?.createdMeshObjects.find((m) => m.name === "player:upperArmL");
     const upperArmR = sceneRef?.createdMeshObjects.find((m) => m.name === "player:upperArmR");
     expect(head?.isVisible).toBe(false);
+    expect(torso?.isVisible).toBe(false);
     expect(upperArmL?.isVisible).toBe(false);
     expect(upperArmR?.isVisible).toBe(false);
 
@@ -210,7 +212,7 @@ describe("Iteration 8: camera mode toggle + avatar visibility (integration)", ()
     demo.dispose();
   });
 
-  it("clamps shoulder orbit behind the avatar when idle", () => {
+  it("clamps shoulder orbit behind the avatar while moving", () => {
     const { babylon } = createFakeBabylon();
     const canvas = document.createElement("canvas");
     const engine = new babylon.Engine(canvas, true);
@@ -234,6 +236,11 @@ describe("Iteration 8: camera mode toggle + avatar visibility (integration)", ()
 
     camera.rotation.y = 0;
     demo.tick(1 / 60);
+
+    input.state.keysPressed.add("KeyW");
+    input.state.keysDown.add("KeyW");
+    demo.tick(1 / 60);
+    input.api.endFrame();
 
     camera.rotation.y = Math.PI;
     demo.tick(1 / 60);

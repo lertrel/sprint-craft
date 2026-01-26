@@ -271,6 +271,7 @@ export function createPlayerAvatar(options: {
   const setFirstPersonVisibility = (isFirstPerson: boolean) => {
     const showHeadArms = !isFirstPerson;
     head.isVisible = showHeadArms;
+    torso.isVisible = showHeadArms;
     frontMarker.isVisible = showHeadArms;
     upperArmL.isVisible = showHeadArms;
     lowerArmL.isVisible = showHeadArms;

@@ -158,18 +158,18 @@ export function createVoxelDemo(options: {
     cameraMode.toggleIfPressed((code) => input.wasKeyPressed(code));
 
     lastMoveKey = updateLastMovementKey(lastMoveKey, (key) => input.wasKeyPressed(key));
+    const pressedMoveKey = MOVEMENT_KEYS.find((key) => input.wasKeyPressed(key)) ?? null;
     const facingKey = resolveFacingKey(lastMoveKey, (key) => input.isKeyDown(key));
     const isMoving = MOVEMENT_KEYS.some((key) => input.isKeyDown(key));
 
     let yaw = camera.rotation?.y ?? 0;
+    if (pressedMoveKey) {
+      shoulderAnchorYaw = facingYawFromKey(yaw, pressedMoveKey);
+    }
     const isFirstPerson = cameraMode.getMode() === "firstPerson";
     if (!isFirstPerson) {
-      if (isMoving) {
-        shoulderAnchorYaw = yaw;
-      } else {
-        yaw = clampShoulderYaw(yaw, shoulderAnchorYaw);
-        if (camera.rotation) camera.rotation.y = yaw;
-      }
+      yaw = clampShoulderYaw(yaw, shoulderAnchorYaw);
+      if (camera.rotation) camera.rotation.y = yaw;
     }
 
     const avatarYaw = facingYawFromKey(yaw, facingKey);

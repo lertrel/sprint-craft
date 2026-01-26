@@ -1166,16 +1166,16 @@ tests/
 
 - **Function:** `it("toggles to first-person on KeyV and hides head/arms", ...)`
   - **Objective:** Validate camera mode toggle and avatar visibility rules.
-  - **Logic:** Sends KeyV, ticks demo, and asserts camera position and head/arm visibility.
+  - **Logic:** Sends KeyV, ticks demo, and asserts camera position and head/arm/torso visibility.
   - **Parameters:** Test callback.
   - **Returns:** `void`.
   - **Side effects & dependencies:** createVoxelDemo, fake Babylon meshes.
   - **Errors/Exceptions:** Assertions may throw.
   - **Performance notes:** O(1).
 
-- **Function:** `it("clamps shoulder orbit behind the avatar when idle", ...)`
-  - **Objective:** Ensure the shoulder camera cannot orbit to the front of the avatar.
-  - **Logic:** Sets camera yaw to the front and ticks the demo, asserting the yaw is clamped to the rear arc.
+- **Function:** `it("clamps shoulder orbit behind the avatar while moving", ...)`
+  - **Objective:** Ensure the shoulder camera cannot orbit to the front of the avatar while moving.
+  - **Logic:** Holds movement input, sets camera yaw to the front, and ticks the demo, asserting the yaw is clamped to the rear arc.
   - **Parameters:** Test callback.
   - **Returns:** `void`.
   - **Side effects & dependencies:** createVoxelDemo, camera rotation updates.

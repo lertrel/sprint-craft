@@ -754,7 +754,7 @@ tests/
 **Functions:**
 - **Function:** `createPlayerAvatar(options: { babylon: BabylonApi; scene: SceneLike }): PlayerAvatar`
   - **Objective:** Construct head, torso, arms, and legs as Babylon primitives and expose pose controls.
-  - **Logic:** Builds meshes (including a front marker), applies proportional placement, enables edge rendering when available, updates positions/rotations per pose (including right arm base pose), and exposes first-person visibility controls for head/arms.
+  - **Logic:** Builds meshes (including a front marker), applies proportional placement, enables edge rendering when available, updates positions/rotations per pose (including right arm base pose), and exposes first-person visibility controls for head/arms/torso.
   - **Parameters:** `options` (`{ babylon: BabylonApi; scene: SceneLike }`)
   - **Returns:** `PlayerAvatar` - exposes `setPose`, `setFirstPersonVisibility`, `getHeadPosition`, `getStandingHeight`, and `dispose`.
   - **Side effects & dependencies:** Creates Babylon meshes/materials; updates mesh transforms each tick.
