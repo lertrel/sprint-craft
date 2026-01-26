@@ -116,8 +116,9 @@ describe("Iteration 7: action swing + nameplate styling (integration)", () => {
     const camera = new babylon.FreeCamera("cam", new babylon.Vector3(0, 0, 0), scene);
 
     let mousePressed = false;
+    const keysDown = new Set<string>();
     const input = {
-      isKeyDown: (_code: string) => false,
+      isKeyDown: (code: string) => keysDown.has(code),
       wasKeyPressed: (_code: string) => false,
       wasKeyReleased: (_code: string) => false,
       isMouseDown: (_button: number) => false,
@@ -145,15 +146,21 @@ describe("Iteration 7: action swing + nameplate styling (integration)", () => {
     player.stance = "standing";
     camera.rotation.y = 0;
     camera.rotation.x = 0;
-    world.setVoxel(0, 3, 2, BlockId.Stone);
+    for (let y = 2; y <= 4; y += 1) {
+      world.setVoxel(0, y, 3, BlockId.Stone);
+      world.setVoxel(1, y, 3, BlockId.Stone);
+    }
 
     const sceneRef = getLastScene();
     const upperArmR = sceneRef?.createdMeshObjects.find((m) => m.name === "player:upperArmR");
+    keysDown.add("KeyW");
+    demo.tick(1 / 60);
     const baseRot = upperArmR?.rotation.x ?? 0;
 
     mousePressed = true;
     demo.tick(1 / 60);
     const actionRot = upperArmR?.rotation.x ?? 0;
+    expect(world.getVoxel(0, 3, 3)).toBe(BlockId.Air);
     expect(actionRot).toBeGreaterThan(baseRot + 0.02);
 
     demo.dispose();
