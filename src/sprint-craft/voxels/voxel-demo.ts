@@ -31,7 +31,7 @@ export type VoxelDemo = {
 
 export const MOVEMENT_KEYS = ["KeyW", "KeyA", "KeyS", "KeyD"] as const;
 export type MovementKey = (typeof MOVEMENT_KEYS)[number];
-export const SHOULDER_ORBIT_MAX_YAW = Math.PI * 0.75;
+export const SHOULDER_ORBIT_MAX_YAW = Math.PI / 3;
 
 const FACING_YAW_OFFSETS: Record<MovementKey, number> = {
   KeyW: 0,
