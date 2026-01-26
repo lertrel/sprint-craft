@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { initApp } from "../src/sprint-craft/app";
+import { BlockId } from "../src/sprint-craft/voxels/blocks";
+import { createVoxelDemo } from "../src/sprint-craft/voxels/voxel-demo";
 import { createFakeBabylon } from "./fakes/fake-babylon";
 
 function setDom(html: string) {
@@ -46,7 +48,34 @@ describe("Iteration 7: avatar front marker + edges (integration)", () => {
   });
 });
 
-describe("Iteration 7: idle facing + right arm pose (integration)", () => {
+describe("Iteration 7: facing rules + right arm pose (integration)", () => {
+  it("uses most-recently-pressed movement key for facing", () => {
+    setDom(baseHudDom());
+    const { babylon, getLastEngine, getLastScene, getLastCamera } = createFakeBabylon();
+    const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
+
+    const app = initApp({ babylon, canvas, document, window, enableDebugGround: false });
+    const engine = getLastEngine();
+    const scene = getLastScene();
+    const camera = getLastCamera();
+    const torso = scene?.createdMeshObjects.find((m) => m.name === "player:torso");
+
+    camera!.rotation.y = 0;
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyW" }));
+    engine?.renderLoop?.();
+    expect(torso?.rotation.y).toBeCloseTo(0, 4);
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyA" }));
+    engine?.renderLoop?.();
+    expect(torso?.rotation.y).toBeCloseTo(-Math.PI / 2, 4);
+
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyA" }));
+    engine?.renderLoop?.();
+    expect(torso?.rotation.y).toBeCloseTo(0, 4);
+
+    app.dispose();
+  });
+
   it("aligns facing to camera yaw and updates right arm pose on movement", () => {
     setDom(baseHudDom());
     const { babylon, getLastEngine, getLastScene, getLastCamera } = createFakeBabylon();
@@ -73,6 +102,78 @@ describe("Iteration 7: idle facing + right arm pose (integration)", () => {
     const movingRotX = upperArmR?.rotation.x ?? 0;
     expect(movingRotX).not.toBe(idleRotX);
     expect(movingRotX).toBeLessThan(idleRotX + 0.001);
+
+    app.dispose();
+  });
+});
+
+describe("Iteration 7: action swing + nameplate styling (integration)", () => {
+  it("adds right arm swing on successful action", () => {
+    const { babylon, getLastScene } = createFakeBabylon();
+    const canvas = document.createElement("canvas");
+    const engine = new babylon.Engine(canvas, true);
+    const scene = new babylon.Scene(engine);
+    const camera = new babylon.FreeCamera("cam", new babylon.Vector3(0, 0, 0), scene);
+
+    let mousePressed = false;
+    const input = {
+      isKeyDown: (_code: string) => false,
+      wasKeyPressed: (_code: string) => false,
+      wasKeyReleased: (_code: string) => false,
+      isMouseDown: (_button: number) => false,
+      wasMousePressed: (_button: number) => mousePressed,
+      wasMouseReleased: (_button: number) => false,
+      endFrame: () => {
+        mousePressed = false;
+      },
+      dispose: () => undefined
+    };
+
+    const demo = createVoxelDemo({
+      babylon,
+      scene,
+      camera: camera as any,
+      input: input as any,
+      getSelectedSlot: () => 1,
+      rebuildBudgetPerFrame: 0
+    });
+
+    const world = demo.getWorld();
+    const player = demo.getPlayerState();
+    player.position = { x: 0.5, y: 2, z: 0.5 };
+    player.velocity = { x: 0, y: 0, z: 0 };
+    player.stance = "standing";
+    camera.rotation.y = 0;
+    camera.rotation.x = 0;
+    world.setVoxel(0, 3, 2, BlockId.Stone);
+
+    const sceneRef = getLastScene();
+    const upperArmR = sceneRef?.createdMeshObjects.find((m) => m.name === "player:upperArmR");
+    const baseRot = upperArmR?.rotation.x ?? 0;
+
+    mousePressed = true;
+    demo.tick(1 / 60);
+    const actionRot = upperArmR?.rotation.x ?? 0;
+    expect(actionRot).toBeGreaterThan(baseRot + 0.02);
+
+    demo.dispose();
+  });
+
+  it("draws bright red text on a transparent nameplate", () => {
+    setDom(baseHudDom());
+    const { babylon, getLastEngine, getLastScene } = createFakeBabylon();
+    const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
+
+    const app = initApp({ babylon, canvas, document, window, enableDebugGround: false });
+    const engine = getLastEngine();
+    engine?.renderLoop?.();
+
+    const scene = getLastScene();
+    const nameplate = scene?.createdMeshObjects.find((m) => m.name === "player:nameplate");
+    const texture = (nameplate as any)?.material?.diffuseTexture;
+    expect(texture?.lastDrawTextArgs?.color).toBe("#ff3333");
+    expect(texture?.lastDrawTextArgs?.clearColor).toBe("rgba(0,0,0,0)");
+    expect(texture?.hasAlpha).toBe(true);
 
     app.dispose();
   });
