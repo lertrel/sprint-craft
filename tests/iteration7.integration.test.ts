@@ -141,12 +141,12 @@ describe("Iteration 7: action swing + nameplate styling (integration)", () => {
 
     const world = demo.getWorld();
     const player = demo.getPlayerState();
-    player.position = { x: 0.5, y: 2, z: 0.5 };
+    player.position = { x: 0.5, y: 20, z: 0.5 };
     player.velocity = { x: 0, y: 0, z: 0 };
     player.stance = "standing";
     camera.rotation.y = 0;
     camera.rotation.x = 0;
-    for (let y = 2; y <= 4; y += 1) {
+    for (let y = 21; y <= 22; y += 1) {
       world.setVoxel(0, y, 3, BlockId.Stone);
       world.setVoxel(1, y, 3, BlockId.Stone);
     }
@@ -160,7 +160,7 @@ describe("Iteration 7: action swing + nameplate styling (integration)", () => {
     mousePressed = true;
     demo.tick(1 / 60);
     const actionRot = upperArmR?.rotation.x ?? 0;
-    expect(world.getVoxel(0, 3, 3)).toBe(BlockId.Air);
+    expect(world.getVoxel(0, 21, 3)).toBe(BlockId.Air);
     expect(actionRot).toBeGreaterThan(baseRot + 0.02);
 
     demo.dispose();
