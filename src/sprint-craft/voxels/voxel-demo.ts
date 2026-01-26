@@ -129,6 +129,7 @@ export function createVoxelDemo(options: {
   const handAnimator = createHandAnimator();
   let actionTriggered = false;
   let lastMoveKey: MovementKey | null = null;
+  let lastFacingKey: MovementKey | null = null;
   let shoulderAnchorYaw = camera.rotation?.y ?? 0;
   const cameraMode = createCameraMode();
   let lastCameraMode = cameraMode.getMode();
@@ -164,9 +165,8 @@ export function createVoxelDemo(options: {
 
     const currentMode = cameraMode.getMode();
     const isFirstPerson = currentMode === "firstPerson";
-    const horizontalSpeed = Math.hypot(player.state.velocity.x, player.state.velocity.z);
-    if (!isFirstPerson && horizontalSpeed > 0.01) {
-      shoulderAnchorYaw = Math.atan2(player.state.velocity.x, player.state.velocity.z);
+    if (!isFirstPerson && facingKey && facingKey !== lastFacingKey) {
+      shoulderAnchorYaw = facingYawFromKey(shoulderAnchorYaw, facingKey);
     }
     if (currentMode !== lastCameraMode) {
       if (!isFirstPerson && camera.rotation) {
@@ -174,6 +174,7 @@ export function createVoxelDemo(options: {
       }
       lastCameraMode = currentMode;
     }
+    lastFacingKey = facingKey;
 
     let yaw = camera.rotation?.y ?? 0;
     if (!isFirstPerson) {
