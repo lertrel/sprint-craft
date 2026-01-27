@@ -45,6 +45,13 @@ const GAME_KEYS_PREVENT_DEFAULT = new Set([
   "Digit9"
 ]);
 
+const isTextInputTarget = (target: EventTarget | null): boolean => {
+  if (!target || !(target instanceof HTMLElement)) return false;
+  if (target instanceof HTMLInputElement) return true;
+  if (target instanceof HTMLTextAreaElement) return true;
+  return target.isContentEditable;
+};
+
 export function createInputState(options: { target: Window }): InputState {
   const { target } = options;
 
@@ -60,9 +67,15 @@ export function createInputState(options: { target: Window }): InputState {
   let onDigit: ((digit: number) => void) | undefined;
   let preventDefaults = false;
 
+  const isTypingEvent = (ev: KeyboardEvent) => {
+    if (isTextInputTarget(ev.target)) return true;
+    return isTextInputTarget(target.document?.activeElement ?? null);
+  };
+
   // Handler for the capture phase - intercepts events before the browser processes them.
   // This is critical for preventing browser shortcuts like Ctrl-W, Ctrl-S, Ctrl-D.
   const onKeyDownCapture = (ev: KeyboardEvent) => {
+    if (isTypingEvent(ev)) return;
     if (!preventDefaults) return;
 
     // Prevent ALL keyboard shortcuts when Ctrl, Alt, or Meta is held while playing.
@@ -79,6 +92,7 @@ export function createInputState(options: { target: Window }): InputState {
   };
 
   const onKeyUpCapture = (ev: KeyboardEvent) => {
+    if (isTypingEvent(ev)) return;
     if (!preventDefaults) return;
     if (ev.ctrlKey || ev.altKey || ev.metaKey) {
       ev.preventDefault();
@@ -86,6 +100,7 @@ export function createInputState(options: { target: Window }): InputState {
   };
 
   const onKeyDown = (ev: KeyboardEvent) => {
+    if (isTypingEvent(ev)) return;
     // Additional prevention in bubble phase for safety
     if (preventDefaults && GAME_KEYS_PREVENT_DEFAULT.has(ev.code)) {
       ev.preventDefault();
@@ -105,6 +120,10 @@ export function createInputState(options: { target: Window }): InputState {
   };
 
   const onKeyUp = (ev: KeyboardEvent) => {
+    if (isTypingEvent(ev)) {
+      state.keysDown.delete(ev.code);
+      return;
+    }
     state.keysDown.delete(ev.code);
     state.keysReleased.add(ev.code);
   };

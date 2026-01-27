@@ -28,6 +28,14 @@ function baseHudDom() {
   `;
 }
 
+function dismissUsernameDialog() {
+  const input = document.getElementById("usernameInput") as HTMLInputElement | null;
+  const button = document.getElementById("usernameOk") as HTMLButtonElement | null;
+  if (input) input.value = "";
+  button?.click();
+  input?.blur();
+}
+
 describe("Iteration 7: avatar front marker + edges (integration)", () => {
   it("creates a front marker and enables edge rendering when supported", () => {
     setDom(baseHudDom());
@@ -55,6 +63,7 @@ describe("Iteration 7: facing rules + right arm pose (integration)", () => {
     const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
 
     const app = initApp({ babylon, canvas, document, window, enableDebugGround: false });
+    dismissUsernameDialog();
     const engine = getLastEngine();
     const scene = getLastScene();
     const camera = getLastCamera();
@@ -82,6 +91,7 @@ describe("Iteration 7: facing rules + right arm pose (integration)", () => {
     const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
 
     const app = initApp({ babylon, canvas, document, window, enableDebugGround: false });
+    dismissUsernameDialog();
     const engine = getLastEngine();
     const scene = getLastScene();
     const camera = getLastCamera();

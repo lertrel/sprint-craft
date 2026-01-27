@@ -49,6 +49,26 @@ Activity 9 - Validation updates for interaction feedback and camera modes
 - Risks: Visual cues are hard to assert; tests may need deterministic hooks for state and mesh visibility.
 - Other Important Remarks: Prefer inspecting mesh names/visibility and draw parameters via fake Babylon.
 
+Activity 10 - Dynamic username capture and nameplate assignment
+- Purpose: Collect a player name at first load and bind it to the avatar nameplate for identity clarity.
+- Risks: Modal UI could block pointer-lock flow or conflict with existing HUD; empty input handling must be deterministic.
+- Other Important Remarks: Use trim + getAnonymousUserName() fallback to "User 1"; format nameplate text as "<{username}>"; no persistence or server call in this phase.
+
+Activity 11 - Torso color differentiation with creation-time option
+- Purpose: Improve avatar readability by distinguishing torso "cloth" from body and environment.
+- Risks: Poor color choice may blend with blocks/sky; inconsistent assignment across respawn could break expectations.
+- Other Important Remarks: Apply default color on first creation only; provide a creation-time option (not an in-game UI). No persistence or live change UI.
+
+Activity 12 - Face/eyes detail on avatar head front
+- Purpose: Make the avatar's front recognizable and improve orientation cues.
+- Risks: Face color may clash with torso or blocks; incorrect placement could appear on wrong side.
+- Other Important Remarks: Use a face color distinct from torso and body; place black eyes on the frontal side only.
+
+Activity 13 - Validation updates for username and appearance changes
+- Purpose: Ensure deterministic behavior for username assignment, torso color, and face/eyes rendering.
+- Risks: Visual features can be hard to assert; tests may need stable mesh names or material/color hooks.
+- Other Important Remarks: Prefer deterministic hooks in fake Babylon for color/material inspection; keep tests aligned with existing iteration spec style.
+
 ## Design
 
 Activity 1 - Avatar visual clarity and front/back differentiation
@@ -132,6 +152,37 @@ Activity 9 - Validation updates for interaction feedback and camera modes
   - Add mesh visibility and material alpha hooks for highlight and preview.
 - TEST: Manual test list for interaction feedback and camera modes.
 
+Activity 10 - Dynamic username capture and nameplate assignment
+- NEW: /workspace/src/sprint-craft/ui/username-dialog.ts
+  - Encapsulate dialog creation and OK handling for avatar name input.
+- NEW: /workspace/src/sprint-craft/usernames.ts
+  - Provide getAnonymousUserName(), resolveUsername(trim + fallback), and formatUsername("<name>").
+- UPDATE: /workspace/index.html
+  - Add dialog markup and styling for "Choose avatar name" input + OK button.
+- UPDATE: /workspace/src/sprint-craft/app.ts
+  - Wire dialog lifecycle and update nameplate to "<{username}>" on OK.
+- UPDATE: /workspace/src/sprint-craft/voxels/voxel-demo.ts
+  - Accept initial name and expose setPlayerName to update nameplate text.
+- TEST: Unit test username resolution/formatting; integration test dialog + nameplate update.
+
+Activity 11 - Torso color differentiation with creation-time option
+- UPDATE: /workspace/src/sprint-craft/voxels/player-avatar.ts
+  - Add torso material with a default cloth color; allow override at creation.
+- UPDATE: /workspace/src/sprint-craft/voxels/voxel-demo.ts
+  - Pass optional avatar appearance (torso color) to avatar creation.
+- TEST: Unit/integration tests for default vs override torso color, stable across respawn.
+
+Activity 12 - Face/eyes detail on avatar head front
+- UPDATE: /workspace/src/sprint-craft/voxels/player-avatar.ts
+  - Add face plate + eyes meshes with distinct materials/colors on the head front.
+- TEST: Integration test verifies face/eyes mesh presence, front placement, and colors.
+
+Activity 13 - Validation updates for username and appearance changes
+- NEW: /workspace/tests/iteration9.unit.test.ts
+  - Username resolution/formatting; torso/face/eye color defaults.
+- NEW: /workspace/tests/iteration9.integration.test.ts
+  - Dialog visibility/OK flow; nameplate updates; face/eyes mesh placement.
+
 ## Iteration Plan
 
 Iteration 7
@@ -148,3 +199,9 @@ Iteration 8
 - Implement camera mode toggle on KeyV (first-person vs shoulder), reusing clamp logic in third-person.
 - Apply avatar visibility rules (hide head/arms in first-person).
 - Add Iteration 8 unit + integration tests and expand fake Babylon hooks as needed.
+
+Iteration 9
+- Add username dialog + resolution/formatting and update nameplate to "<{username}>".
+- Add torso default cloth color and creation-time appearance option.
+- Add face plate + eye meshes on head front with distinct colors.
+- Add Iteration 9 unit + integration tests for username and appearance.

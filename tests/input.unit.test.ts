@@ -55,6 +55,39 @@ describe("InputState (unit)", () => {
     input.dispose();
   });
 
+  it("ignores keyboard input while typing in a text field", () => {
+    const input = createInputState({ target: window });
+    input.setPreventDefaults?.(true);
+    const seen: number[] = [];
+    input.onDigit = (d) => seen.push(d);
+
+    const field = document.createElement("input");
+    document.body.appendChild(field);
+    field.focus();
+
+    const digitDown = new KeyboardEvent("keydown", {
+      code: "Digit5",
+      cancelable: true,
+      bubbles: true
+    });
+    field.dispatchEvent(digitDown);
+    expect(digitDown.defaultPrevented).toBe(false);
+    expect(seen).toEqual([]);
+    expect(input.isKeyDown("Digit5")).toBe(false);
+
+    const wDown = new KeyboardEvent("keydown", {
+      code: "KeyW",
+      cancelable: true,
+      bubbles: true
+    });
+    field.dispatchEvent(wDown);
+    expect(wDown.defaultPrevented).toBe(false);
+    expect(input.isKeyDown("KeyW")).toBe(false);
+
+    field.remove();
+    input.dispose();
+  });
+
   it("prevents ctrl shortcuts while still tracking keys", () => {
     const input = createInputState({ target: window });
     input.setPreventDefaults?.(true);
