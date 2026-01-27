@@ -9,6 +9,8 @@ export type NameplateHandle = {
 
 const DEFAULT_SIZE = { width: 1.4, height: 0.32 };
 const DEFAULT_TEXTURE = { width: 512, height: 128 };
+const NAMEPLATE_TEXT_COLOR = "#ff3333";
+const NAMEPLATE_CLEAR_COLOR = "rgba(0,0,0,0)";
 
 export function createNameplate(options: {
   babylon: BabylonApi;
@@ -42,6 +44,10 @@ export function createNameplate(options: {
         false
       )
     : null;
+  if (texture && "hasAlpha" in (texture as any)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (texture as any).hasAlpha = true;
+  }
 
   const material =
     "StandardMaterial" in babylon
@@ -60,7 +66,7 @@ export function createNameplate(options: {
           (mat as any).disableLighting = true;
           if ("Color3" in babylon) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (mat as any).emissiveColor = new (babylon as any).Color3(1, 1, 1);
+            (mat as any).emissiveColor = new (babylon as any).Color3(1, 0.25, 0.25);
           }
           return mat as unknown;
         })()
@@ -79,6 +85,24 @@ export function createNameplate(options: {
     if (!texture) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const draw = (texture as any).drawText;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const getContext = (texture as any).getContext;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const getSize = (texture as any).getSize;
+    if (typeof getContext === "function") {
+      const ctx = getContext.call(texture) as
+        | { clearRect?: (x: number, y: number, width: number, height: number) => void }
+        | undefined;
+      if (ctx?.clearRect) {
+        const size =
+          typeof getSize === "function"
+            ? (getSize.call(texture) as { width: number; height: number } | null)
+            : null;
+        const width = size?.width ?? DEFAULT_TEXTURE.width;
+        const height = size?.height ?? DEFAULT_TEXTURE.height;
+        ctx.clearRect(0, 0, width, height);
+      }
+    }
     if (typeof draw === "function") {
       draw.call(
         texture,
@@ -86,8 +110,8 @@ export function createNameplate(options: {
         null,
         null,
         "bold 64px Arial",
-        "#ffffff",
-        "transparent",
+        NAMEPLATE_TEXT_COLOR,
+        NAMEPLATE_CLEAR_COLOR,
         true
       );
     }

@@ -6,8 +6,11 @@ import { createHotbar } from "./ui/hotbar";
 import { createToast } from "./ui/toast";
 import { createPointerLock } from "./ui/pointer-lock";
 import { createMouseLook } from "./ui/mouse-look";
+import { createCrosshair } from "./ui/crosshair";
+import { createUsernameDialog } from "./ui/username-dialog";
 import { createDebugGround } from "./world/debug-ground";
 import { createVoxelDemo } from "./voxels/voxel-demo";
+import { formatUsername, resolveUsername } from "./usernames";
 
 export type BabylonApi = {
   // Intentionally permissive so real Babylon classes are assignable under TS strict mode.
@@ -119,6 +122,7 @@ export function initApp(options: InitAppOptions): AppHandle {
   const hotbarEl = document.getElementById("hotbar");
   const helpEl = document.getElementById("help");
   const brandSplashEl = document.getElementById("brandSplash");
+  const hudEl = document.getElementById("hud");
 
   if (!toastEl || !hotbarEl || !helpEl) {
     throw new Error("Missing required HUD elements (#toast, #hotbar, #help)");
@@ -126,6 +130,7 @@ export function initApp(options: InitAppOptions): AppHandle {
 
   const toast = createToast(toastEl);
   const hotbar = createHotbar(hotbarEl);
+  const crosshair = createCrosshair({ document, container: hudEl });
 
   const input = createInputState({ target: window });
   input.onDigit = (digit) => {
@@ -247,6 +252,16 @@ export function initApp(options: InitAppOptions): AppHandle {
     rebuildBudgetPerFrame: 2
   });
 
+  const usernameDialog = createUsernameDialog({
+    document,
+    container: hudEl,
+    onConfirm: (value) => {
+      const resolved = resolveUsername(value);
+      voxelDemo.setPlayerName(formatUsername(resolved));
+    }
+  });
+  usernameDialog.show();
+
   // Input is consumed on a per-frame cadence.
   let frameCount = 0;
   let lastNowMs: number | null = null;
@@ -294,6 +309,8 @@ export function initApp(options: InitAppOptions): AppHandle {
       pointerLock.dispose();
       input.dispose();
       voxelDemo.dispose();
+      crosshair.dispose();
+      usernameDialog.dispose();
       window.removeEventListener("resize", onResize);
       scene.dispose?.();
       engine.dispose?.();

@@ -141,9 +141,12 @@ export function createFakeBabylon(): {
     scene: any;
     useVertexColor = false;
     disableLighting = false;
+    alpha = 1;
+    wireframe = false;
     useAlphaFromDiffuseTexture = false;
     backFaceCulling = true;
     diffuseTexture: DynamicTexture | null = null;
+    diffuseColor: Color3 | null = null;
     emissiveColor: Color3 | null = null;
     specularColor: Color3 | null = null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -171,12 +174,19 @@ export function createFakeBabylon(): {
     parent: Mesh | null = null;
     billboardMode = 0;
     isPickable = true;
+    isVisible = true;
+    edgesEnabled = false;
+    edgesWidth = 0;
+    edgesColor: Color4 | { r: number; g: number; b: number; a: number } | null = null;
     constructor(name: string, scene: FakeScene) {
       this.name = name;
       this.scene = scene;
       scene.createdMeshes.push(name);
       scene.createdMeshObjects.push(this);
       lastScene = scene;
+    }
+    enableEdgesRendering() {
+      this.edgesEnabled = true;
     }
     dispose() {
       this.disposed = true;
@@ -187,12 +197,44 @@ export function createFakeBabylon(): {
     name: string;
     size: { width: number; height: number };
     lastDrawText: string | null = null;
+    lastDrawTextArgs:
+      | {
+          text: string;
+          x: number | null;
+          y: number | null;
+          font: string;
+          color: string;
+          clearColor: string;
+          invertY: boolean;
+        }
+      | null = null;
+    hasAlpha = false;
+    clearRectCalls = 0;
+    lastClearRect: { x: number; y: number; width: number; height: number } | null = null;
+    private context = {
+      clearRect: (x: number, y: number, width: number, height: number) => {
+        this.clearRectCalls += 1;
+        this.lastClearRect = { x, y, width, height };
+      }
+    };
     constructor(name: string, size: { width: number; height: number }, _scene?: unknown, _generateMipMaps?: boolean) {
       this.name = name;
       this.size = size;
     }
-    drawText(text: string) {
+    drawText(
+      text: string,
+      x: number | null = null,
+      y: number | null = null,
+      font = "",
+      color = "",
+      clearColor = "",
+      invertY = false
+    ) {
       this.lastDrawText = text;
+      this.lastDrawTextArgs = { text, x, y, font, color, clearColor, invertY };
+    }
+    getContext() {
+      return this.context;
     }
     getSize() {
       return this.size;

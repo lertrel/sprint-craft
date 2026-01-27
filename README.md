@@ -26,6 +26,7 @@ Open:
 - **Shift**: sprint
 - **Alt** (preferred) / **Ctrl**: crouch/crawl
 - **1–9**: select hotbar slot (shows toast)
+- **V**: toggle camera mode (first-person / shoulder)
 - **LMB**: break block
 - **RMB**: place block
 
@@ -39,8 +40,9 @@ Open:
 
 - The demo boots a procedurally generated voxel terrain at startup.
 - Standalone build output lives in `standalone/` (see below).
+- On first load, choose an avatar name; the nameplate shows `<Name>`.
 
-## Implemented Features (Iterations 1-5)
+## Implemented Features (Iterations 1-9)
 
 - Iteration 1: Engine/scene bootstrap, pointer lock + mouse look, input state + hotbar UI, and initial debug lighting.
 - Iteration 2: Core voxel data models, chunk meshing, world generation, rebuild scheduling, and multi-chunk rendering.
@@ -49,6 +51,10 @@ Open:
 - Iteration 5: Collision edge-case polish, sky/fog readability, rebuild throttling, standalone build, and self-validation checklist.
   - Crouch input supports Alt (preferred) and Ctrl; shortcut prevention improved for gameplay focus.
   - Wall-crouch bounce fix prevents upward snapping when sliding away from walls.
+- Iteration 6: Branding splash hides on first input; full-body avatar with shoulder camera + voxel clamp; action-tied arm swing; nameplate above head.
+- Iteration 7: Front marker + edge rendering for avatar clarity; movement-facing rules (most recent key, idle aligns to camera yaw); right arm pose/action-only swing; nameplate style update (transparent background, bright red text).
+- Iteration 8: Crosshair HUD, target highlight, and placement preview ghost block; `KeyV` camera mode toggle (first-person vs shoulder) with rear-arc clamp + avatar visibility rules; standalone build UTC stamp.
+- Iteration 9: Username dialog and formatted nameplate updates; torso cloth color differentiation with override option; face plate + eyes on avatar head.
 
 ## Standalone (no Node/npm at runtime)
 

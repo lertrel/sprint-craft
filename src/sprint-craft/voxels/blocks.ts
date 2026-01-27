@@ -14,6 +14,7 @@ export const BlockId = {
 export type BlockId = (typeof BlockId)[keyof typeof BlockId];
 
 export type Rgb01 = readonly [r: number, g: number, b: number];
+export type Rgba01 = readonly [r: number, g: number, b: number, a: number];
 
 /**
  * Face direction identifiers for per-face coloring.
@@ -58,6 +59,7 @@ const BRICK_COLOR: Rgb01 = [0.7, 0.28, 0.24]; // Brick red
 const CLAY_COLOR: Rgb01 = [0.72, 0.58, 0.48]; // Muted clay
 const SLATE_COLOR: Rgb01 = [0.35, 0.36, 0.4]; // Dark slate
 const SNOW_COLOR: Rgb01 = [0.92, 0.94, 0.97]; // Snow white
+const PREVIEW_ALPHA = 0.35;
 
 const BLOCKS_BY_ID: Record<number, BlockDef> = {
   [BlockId.Air]: {
@@ -183,5 +185,9 @@ export function getBlockFaceColor(def: BlockDef, faceDirection: FaceDirection): 
     return def.faceColors[faceDirection];
   }
   return def.color;
+}
+
+export function getBlockPreviewColor(def: BlockDef): Rgba01 {
+  return [def.color[0], def.color[1], def.color[2], PREVIEW_ALPHA];
 }
 

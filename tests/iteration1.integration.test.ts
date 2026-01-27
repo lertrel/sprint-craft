@@ -25,6 +25,14 @@ function baseHudDom() {
   `;
 }
 
+function dismissUsernameDialog() {
+  const input = document.getElementById("usernameInput") as HTMLInputElement | null;
+  const button = document.getElementById("usernameOk") as HTMLButtonElement | null;
+  if (input) input.value = "";
+  button?.click();
+  input?.blur();
+}
+
 describe("Iteration 1 (integration-ish)", () => {
   it("boots engine/scene and renders frames; logs 'Engine initialized'", () => {
     setDom(baseHudDom());
@@ -91,6 +99,7 @@ describe("Iteration 1 (integration-ish)", () => {
 
     const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
     const app = initApp({ babylon, canvas, document, window, enableDebugGround: false });
+    dismissUsernameDialog();
 
     const slots = Array.from(document.querySelectorAll(".slot"));
     expect(slots).toHaveLength(9);
