@@ -24,18 +24,24 @@ export function createUsernameDialog(options: {
     dialog.id = DIALOG_ID;
   }
 
-  let input = document.getElementById(INPUT_ID) as HTMLInputElement | null;
-  const createdInput = !(input instanceof HTMLInputElement);
-  if (createdInput) {
+  const inputEl = document.getElementById(INPUT_ID);
+  const createdInput = !(inputEl instanceof HTMLInputElement);
+  let input: HTMLInputElement;
+  if (inputEl instanceof HTMLInputElement) {
+    input = inputEl;
+  } else {
     input = document.createElement("input");
     input.id = INPUT_ID;
     input.type = "text";
     input.autocomplete = "off";
   }
 
-  let button = document.getElementById(BUTTON_ID) as HTMLButtonElement | null;
-  const createdButton = !(button instanceof HTMLButtonElement);
-  if (createdButton) {
+  const buttonEl = document.getElementById(BUTTON_ID);
+  const createdButton = !(buttonEl instanceof HTMLButtonElement);
+  let button: HTMLButtonElement;
+  if (buttonEl instanceof HTMLButtonElement) {
+    button = buttonEl;
+  } else {
     button = document.createElement("button");
     button.id = BUTTON_ID;
     button.type = "button";
@@ -59,7 +65,7 @@ export function createUsernameDialog(options: {
   };
   const show = () => {
     dialog.classList.remove("hidden");
-    input?.focus?.();
+    input.focus?.();
   };
 
   const handleConfirm = () => {
