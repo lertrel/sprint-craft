@@ -59,7 +59,7 @@ export type RightArmPose = "idle" | "forward";
 const DIMENSIONS = {
   head: { w: 0.35, h: 0.3, d: 0.35 },
   face: { w: 0.22, h: 0.16, d: 0.02 },
-  eye: { w: 0.05, h: 0.05, d: 0.02 },
+  eye: { w: 0.07, h: 0.07, d: 0.025 },
   torso: { w: 0.5, h: 0.6, d: 0.3 },
   arm: { w: 0.18, h: 0.35, d: 0.18 },
   leg: { w: 0.2, h: 0.45, d: 0.2 },
@@ -243,8 +243,8 @@ export function createPlayerAvatar(options: {
   const shoulderY = legTotal + DIMENSIONS.torso.h - 0.05;
   const markerZ = DIMENSIONS.torso.d / 2 + DIMENSIONS.marker.d / 2 + 0.02;
   const faceZ = DIMENSIONS.head.d / 2 + DIMENSIONS.face.d / 2 + 0.005;
-  const eyeZ = DIMENSIONS.head.d / 2 + DIMENSIONS.eye.d / 2 + 0.01;
-  const eyeX = 0.07;
+  const eyeZ = DIMENSIONS.head.d / 2 + DIMENSIONS.eye.d / 2 + 0.02;
+  const eyeX = 0.1;
   const eyeY = headCenterY + 0.04;
 
   const armX = DIMENSIONS.torso.w / 2 + DIMENSIONS.arm.w / 2 + 0.05;
