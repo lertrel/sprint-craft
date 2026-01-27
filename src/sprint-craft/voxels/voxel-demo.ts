@@ -6,7 +6,7 @@ import { createChunkRebuildScheduler } from "./rebuild-scheduler";
 import { createChunkRenderer } from "./chunk-renderer";
 import { createWorld } from "./world";
 import { createHandAnimator } from "./hand-animation";
-import { createPlayerAvatar } from "./player-avatar";
+import { createPlayerAvatar, type AvatarAppearance } from "./player-avatar";
 import { createPlayerController, computeEyeHeight } from "./player-controller";
 import { createDefaultPlayerState } from "./player-state";
 import { findSafeSpawnAboveGround } from "./spawn";
@@ -18,6 +18,7 @@ import { createTargeting } from "./targeting";
 import { createTargetHighlight } from "./target-highlight";
 import { createPlacementPreview } from "./placement-preview";
 import { createCameraMode } from "./camera-mode";
+import { formatUsername, getAnonymousUserName } from "../usernames";
 
 export type VoxelDemo = {
   tick: (dtSec: number) => void;
@@ -27,6 +28,7 @@ export type VoxelDemo = {
   getRebuildCount: () => number;
   getWorld: () => ReturnType<typeof createWorld>;
   getPlayerState: () => ReturnType<typeof createDefaultPlayerState>;
+  setPlayerName: (name: string) => void;
 };
 
 export const MOVEMENT_KEYS = ["KeyW", "KeyA", "KeyS", "KeyD"] as const;
@@ -88,8 +90,19 @@ export function createVoxelDemo(options: {
   input: InputState;
   getSelectedSlot: () => number;
   rebuildBudgetPerFrame?: number;
+  playerName?: string;
+  avatarAppearance?: AvatarAppearance;
 }): VoxelDemo {
-  const { babylon, scene, camera, input, getSelectedSlot, rebuildBudgetPerFrame = 2 } = options;
+  const {
+    babylon,
+    scene,
+    camera,
+    input,
+    getSelectedSlot,
+    rebuildBudgetPerFrame = 2,
+    playerName,
+    avatarAppearance
+  } = options;
 
   const world = createWorld();
   const scheduler = createChunkRebuildScheduler();
@@ -125,8 +138,9 @@ export function createVoxelDemo(options: {
       })
   });
 
-  const avatar = createPlayerAvatar({ babylon, scene });
-  const nameplate = createNameplate({ babylon, scene, text: "<User 1>" });
+  const avatar = createPlayerAvatar({ babylon, scene, appearance: avatarAppearance });
+  const defaultName = formatUsername(getAnonymousUserName());
+  const nameplate = createNameplate({ babylon, scene, text: playerName ?? defaultName });
   const handAnimator = createHandAnimator();
   let actionTriggered = false;
   let lastMoveKey: MovementKey | null = null;
@@ -302,7 +316,10 @@ export function createVoxelDemo(options: {
     getChunkMeshCount: () => renderer.getMeshCount(),
     getRebuildCount: () => rebuildCount,
     getWorld: () => world,
-    getPlayerState: () => player.state
+    getPlayerState: () => player.state,
+    setPlayerName: (name: string) => {
+      nameplate.setText(name);
+    }
   };
 }
 

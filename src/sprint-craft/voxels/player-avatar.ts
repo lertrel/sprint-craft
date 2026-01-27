@@ -11,9 +11,23 @@ type MeshLike = {
   dispose?: () => void;
 };
 
+export type RgbColor = readonly [r: number, g: number, b: number];
+
+export type AvatarAppearance = {
+  torsoColor?: RgbColor;
+};
+
+const BODY_COLOR: RgbColor = [0.75, 0.8, 0.9];
+export const DEFAULT_TORSO_COLOR: RgbColor = [0.92, 0.48, 0.18];
+export const FACE_COLOR: RgbColor = [0.9, 0.76, 0.6];
+export const EYE_COLOR: RgbColor = [0, 0, 0];
+
 export type PlayerAvatarParts = {
   head: MeshLike;
   torso: MeshLike;
+  face: MeshLike;
+  eyeL: MeshLike;
+  eyeR: MeshLike;
   frontMarker: MeshLike;
   upperArmL: MeshLike;
   lowerArmL: MeshLike;
@@ -44,6 +58,8 @@ export type RightArmPose = "idle" | "forward";
 
 const DIMENSIONS = {
   head: { w: 0.35, h: 0.3, d: 0.35 },
+  face: { w: 0.22, h: 0.16, d: 0.02 },
+  eye: { w: 0.05, h: 0.05, d: 0.02 },
   torso: { w: 0.5, h: 0.6, d: 0.3 },
   arm: { w: 0.18, h: 0.35, d: 0.18 },
   leg: { w: 0.2, h: 0.45, d: 0.2 },
@@ -61,13 +77,22 @@ const RIGHT_ARM_LOWER_SCALE = 0.6;
 export function createPlayerAvatar(options: {
   babylon: BabylonApi;
   scene: SceneLike;
+  appearance?: AvatarAppearance;
 }): PlayerAvatar {
-  const { babylon, scene } = options;
+  const { babylon, scene, appearance } = options;
   const builder = babylon.MeshBuilder;
   const createBox = builder.CreateBox;
   if (!createBox) {
     throw new Error("MeshBuilder.CreateBox is required for player avatar");
   }
+
+  const toColor3 = (rgb: RgbColor) => {
+    if ("Color3" in babylon) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return new (babylon as any).Color3(rgb[0], rgb[1], rgb[2]);
+    }
+    return null;
+  };
 
   const material =
     "StandardMaterial" in babylon
@@ -76,9 +101,61 @@ export function createPlayerAvatar(options: {
           const mat = new (babylon as any).StandardMaterial("playerMat", scene as any);
           if ("Color3" in babylon) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (mat as any).diffuseColor = new (babylon as any).Color3(0.75, 0.8, 0.9);
+            (mat as any).diffuseColor = toColor3(BODY_COLOR);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (mat as any).specularColor = new (babylon as any).Color3(0.1, 0.1, 0.1);
+          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (mat as any).disableLighting = false;
+          return mat as unknown;
+        })()
+      : null;
+
+  const torsoMaterial =
+    "StandardMaterial" in babylon
+      ? (() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const mat = new (babylon as any).StandardMaterial("playerTorsoMat", scene as any);
+          const torsoColor = appearance?.torsoColor ?? DEFAULT_TORSO_COLOR;
+          if ("Color3" in babylon) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (mat as any).diffuseColor = toColor3(torsoColor);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (mat as any).specularColor = new (babylon as any).Color3(0.12, 0.12, 0.12);
+          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (mat as any).disableLighting = false;
+          return mat as unknown;
+        })()
+      : null;
+
+  const faceMaterial =
+    "StandardMaterial" in babylon
+      ? (() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const mat = new (babylon as any).StandardMaterial("playerFaceMat", scene as any);
+          if ("Color3" in babylon) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (mat as any).diffuseColor = toColor3(FACE_COLOR);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (mat as any).specularColor = new (babylon as any).Color3(0.1, 0.1, 0.1);
+          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (mat as any).disableLighting = false;
+          return mat as unknown;
+        })()
+      : null;
+
+  const eyeMaterial =
+    "StandardMaterial" in babylon
+      ? (() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const mat = new (babylon as any).StandardMaterial("playerEyeMat", scene as any);
+          if ("Color3" in babylon) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (mat as any).diffuseColor = toColor3(EYE_COLOR);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (mat as any).specularColor = new (babylon as any).Color3(0, 0, 0);
           }
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (mat as any).disableLighting = false;
@@ -146,7 +223,10 @@ export function createPlayerAvatar(options: {
   };
 
   const head = makeBox("player:head", DIMENSIONS.head);
-  const torso = makeBox("player:torso", DIMENSIONS.torso);
+  const torso = makeBox("player:torso", DIMENSIONS.torso, undefined, torsoMaterial);
+  const face = makeBox("player:face", DIMENSIONS.face, undefined, faceMaterial);
+  const eyeL = makeBox("player:eyeL", DIMENSIONS.eye, undefined, eyeMaterial);
+  const eyeR = makeBox("player:eyeR", DIMENSIONS.eye, undefined, eyeMaterial);
   const frontMarker = makeBox("player:frontMarker", DIMENSIONS.marker, undefined, markerMaterial);
   const upperArmL = makeBox("player:upperArmL", DIMENSIONS.arm);
   const lowerArmL = makeBox("player:lowerArmL", DIMENSIONS.arm);
@@ -162,6 +242,10 @@ export function createPlayerAvatar(options: {
   const headCenterY = legTotal + DIMENSIONS.torso.h + DIMENSIONS.head.h / 2;
   const shoulderY = legTotal + DIMENSIONS.torso.h - 0.05;
   const markerZ = DIMENSIONS.torso.d / 2 + DIMENSIONS.marker.d / 2 + 0.02;
+  const faceZ = DIMENSIONS.head.d / 2 + DIMENSIONS.face.d / 2 + 0.005;
+  const eyeZ = DIMENSIONS.head.d / 2 + DIMENSIONS.eye.d / 2 + 0.01;
+  const eyeX = 0.07;
+  const eyeY = headCenterY + 0.04;
 
   const armX = DIMENSIONS.torso.w / 2 + DIMENSIONS.arm.w / 2 + 0.05;
   const legX = DIMENSIONS.torso.w / 2 - DIMENSIONS.leg.w / 2 - 0.05;
@@ -173,6 +257,9 @@ export function createPlayerAvatar(options: {
   const basePositions: Record<keyof PlayerAvatarParts, Vec3Like> = {
     head: { x: 0, y: headCenterY, z: 0 },
     torso: { x: 0, y: torsoCenterY, z: 0 },
+    face: { x: 0, y: headCenterY, z: faceZ },
+    eyeL: { x: -eyeX, y: eyeY, z: eyeZ },
+    eyeR: { x: eyeX, y: eyeY, z: eyeZ },
     frontMarker: { x: 0, y: torsoCenterY + 0.05, z: markerZ },
     upperArmL: { x: -armX, y: shoulderY - DIMENSIONS.arm.h / 2, z: 0 },
     lowerArmL: { x: -armX, y: lowerArmY, z: 0 },
@@ -187,6 +274,9 @@ export function createPlayerAvatar(options: {
   const parts: PlayerAvatarParts = {
     head,
     torso,
+    face,
+    eyeL,
+    eyeR,
     frontMarker,
     upperArmL,
     lowerArmL,
@@ -238,6 +328,9 @@ export function createPlayerAvatar(options: {
 
     applyScale(head, basePositions.head, scaleY, pose.yaw, pose.position);
     applyScale(torso, basePositions.torso, scaleY, pose.yaw, pose.position);
+    applyScale(face, basePositions.face, scaleY, pose.yaw, pose.position);
+    applyScale(eyeL, basePositions.eyeL, scaleY, pose.yaw, pose.position);
+    applyScale(eyeR, basePositions.eyeR, scaleY, pose.yaw, pose.position);
     applyScale(frontMarker, basePositions.frontMarker, scaleY, pose.yaw, pose.position);
     applyScale(upperArmL, basePositions.upperArmL, scaleY, pose.yaw, pose.position);
     applyScale(upperArmR, basePositions.upperArmR, scaleY, pose.yaw, pose.position);
@@ -250,6 +343,9 @@ export function createPlayerAvatar(options: {
 
     head.rotation.y = pose.yaw;
     torso.rotation.y = pose.yaw;
+    face.rotation.y = pose.yaw;
+    eyeL.rotation.y = pose.yaw;
+    eyeR.rotation.y = pose.yaw;
     frontMarker.rotation.y = pose.yaw;
     upperArmL.rotation.y = pose.yaw;
     upperArmR.rotation.y = pose.yaw;
@@ -272,6 +368,9 @@ export function createPlayerAvatar(options: {
     const showHeadArms = !isFirstPerson;
     head.isVisible = showHeadArms;
     torso.isVisible = showHeadArms;
+    face.isVisible = showHeadArms;
+    eyeL.isVisible = showHeadArms;
+    eyeR.isVisible = showHeadArms;
     frontMarker.isVisible = showHeadArms;
     upperArmL.isVisible = showHeadArms;
     lowerArmL.isVisible = showHeadArms;
@@ -306,6 +405,12 @@ export function createPlayerAvatar(options: {
       for (const mesh of all) mesh.dispose?.();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (material as any)?.dispose?.();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (torsoMaterial as any)?.dispose?.();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (faceMaterial as any)?.dispose?.();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (eyeMaterial as any)?.dispose?.();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (markerMaterial as any)?.dispose?.();
     }

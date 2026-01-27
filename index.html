@@ -77,6 +77,46 @@
       #brandSplash.hidden {
         opacity: 0;
       }
+      #usernameDialog {
+        position: absolute;
+        left: 50%;
+        top: 38%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.55);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 12px;
+        padding: 14px 16px;
+        color: rgba(255, 255, 255, 0.92);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-width: 260px;
+        pointer-events: auto;
+      }
+      #usernameDialog.hidden {
+        display: none;
+      }
+      #usernameDialog label {
+        font-size: 13px;
+        letter-spacing: 0.02em;
+      }
+      #usernameDialog input {
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(10, 12, 16, 0.7);
+        color: white;
+        outline: none;
+      }
+      #usernameDialog button {
+        align-self: flex-end;
+        padding: 6px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.12);
+        color: white;
+        cursor: pointer;
+      }
       #hotbar {
         position: absolute;
         left: 50%;
@@ -153,6 +193,11 @@
       <div id="hud">
         <div id="crosshair"></div>
         <div id="brandSplash">Sprint Craft</div>
+        <div id="usernameDialog">
+          <label for="usernameInput">Choose avatar name</label>
+          <input id="usernameInput" type="text" autocomplete="off" />
+          <button id="usernameOk" type="button">OK</button>
+        </div>
         <div id="toast"></div>
         <div id="help">
           <div><b>Sprint Craft</b> — click canvas for pointer lock</div>
