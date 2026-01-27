@@ -35,6 +35,7 @@ export function createUsernameDialog(options: {
     input.type = "text";
     input.autocomplete = "off";
   }
+  input.maxLength = 10;
 
   const buttonEl = document.getElementById(BUTTON_ID);
   const createdButton = !(buttonEl instanceof HTMLButtonElement);

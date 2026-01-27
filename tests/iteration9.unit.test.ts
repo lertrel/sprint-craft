@@ -9,6 +9,7 @@ describe("Iteration 9: username helpers (unit)", () => {
     expect(resolveUsername("  John  ")).toBe("John");
     expect(resolveUsername("")).toBe(getAnonymousUserName());
     expect(resolveUsername("   ")).toBe("User 1");
+    expect(resolveUsername("  12345678901 ")).toBe("1234567890");
   });
 
   it("formats usernames with angle brackets", () => {
