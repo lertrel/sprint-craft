@@ -209,6 +209,14 @@ export function createFakeBabylon(): {
         }
       | null = null;
     hasAlpha = false;
+    clearRectCalls = 0;
+    lastClearRect: { x: number; y: number; width: number; height: number } | null = null;
+    private context = {
+      clearRect: (x: number, y: number, width: number, height: number) => {
+        this.clearRectCalls += 1;
+        this.lastClearRect = { x, y, width, height };
+      }
+    };
     constructor(name: string, size: { width: number; height: number }, _scene?: unknown, _generateMipMaps?: boolean) {
       this.name = name;
       this.size = size;
@@ -224,6 +232,9 @@ export function createFakeBabylon(): {
     ) {
       this.lastDrawText = text;
       this.lastDrawTextArgs = { text, x, y, font, color, clearColor, invertY };
+    }
+    getContext() {
+      return this.context;
     }
     getSize() {
       return this.size;

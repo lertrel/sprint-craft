@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createNameplate } from "../src/sprint-craft/ui/nameplate";
 import { createPlayerAvatar, DEFAULT_TORSO_COLOR, EYE_COLOR, FACE_COLOR } from "../src/sprint-craft/voxels/player-avatar";
 import { formatUsername, getAnonymousUserName, resolveUsername } from "../src/sprint-craft/usernames";
 import { createFakeBabylon } from "./fakes/fake-babylon";
@@ -84,5 +85,26 @@ describe("Iteration 9: face and eye colors (unit)", () => {
     expect(eyeColor.r).toBeCloseTo(EYE_COLOR[0], 5);
     expect(eyeColor.g).toBeCloseTo(EYE_COLOR[1], 5);
     expect(eyeColor.b).toBeCloseTo(EYE_COLOR[2], 5);
+  });
+});
+
+describe("Iteration 9: nameplate redraw clearing (unit)", () => {
+  it("clears the texture before redrawing text", () => {
+    const { babylon, getLastScene } = createFakeBabylon();
+    const canvas = document.createElement("canvas");
+    const engine = new babylon.Engine(canvas, true);
+    const scene = new babylon.Scene(engine);
+
+    const nameplate = createNameplate({ babylon, scene, text: "<User 1>" });
+    const lastScene = getLastScene();
+    const mesh = lastScene?.createdMeshObjects.find((m) => m.name === nameplate.meshName);
+    const texture = (mesh as any)?.material?.diffuseTexture;
+    const clearsBefore = texture?.clearRectCalls ?? 0;
+
+    nameplate.setText("<Test>");
+    const clearsAfter = texture?.clearRectCalls ?? 0;
+    expect(clearsAfter).toBeGreaterThan(clearsBefore);
+    expect(texture?.lastClearRect?.width).toBe(512);
+    expect(texture?.lastClearRect?.height).toBe(128);
   });
 });

@@ -85,6 +85,24 @@ export function createNameplate(options: {
     if (!texture) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const draw = (texture as any).drawText;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const getContext = (texture as any).getContext;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const getSize = (texture as any).getSize;
+    if (typeof getContext === "function") {
+      const ctx = getContext.call(texture) as
+        | { clearRect?: (x: number, y: number, width: number, height: number) => void }
+        | undefined;
+      if (ctx?.clearRect) {
+        const size =
+          typeof getSize === "function"
+            ? (getSize.call(texture) as { width: number; height: number } | null)
+            : null;
+        const width = size?.width ?? DEFAULT_TEXTURE.width;
+        const height = size?.height ?? DEFAULT_TEXTURE.height;
+        ctx.clearRect(0, 0, width, height);
+      }
+    }
     if (typeof draw === "function") {
       draw.call(
         texture,
