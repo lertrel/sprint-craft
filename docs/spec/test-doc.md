@@ -29,12 +29,14 @@ tests/
   iteration8.build.test.ts
   iteration8.integration.test.ts
   iteration8.unit.test.ts
+  iteration9.integration.test.ts
+  iteration9.unit.test.ts
 ```
 
 ### Counts
 - Folders: 2
-- Files: 18
-- Approximate number of functions in tests: ~330 (regex count of "function" and "=>" tokens in tests)
+- Files: 20
+- Approximate number of functions in tests: ~354 (regex count of "function" and "=>" tokens in tests)
 
 ## Program Document - Test Suite
 **Assumption:** The heading template from sys-doc is reused for tests. Each test case is listed as a function-like entry using its `it("...")` description, plus any helper functions defined in the file.
@@ -1269,6 +1271,104 @@ tests/
   - **Parameters:** Test callback.
   - **Returns:** `void`.
   - **Side effects & dependencies:** createCameraMode.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+### File: `tests/iteration9.integration.test.ts`
+**File path:** `tests/iteration9.integration.test.ts`
+**Objective:** Integration tests for username dialog behavior and avatar face/eyes placement.
+**Functions:**
+- **Function:** `setDom(html: string): void`
+  - **Objective:** Install HUD DOM and allow pointerLockElement mutation.
+  - **Logic:** Sets `document.body.innerHTML` and makes `pointerLockElement` writable.
+  - **Parameters:** `html` (`string`)
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** DOM mutation.
+  - **Errors/Exceptions:** None explicit.
+  - **Performance notes:** O(1).
+
+- **Function:** `baseHudDom(): string`
+  - **Objective:** Provide HUD markup including the username dialog elements.
+  - **Logic:** Returns a template string with canvas, HUD elements, and username dialog.
+  - **Parameters:** None.
+  - **Returns:** `string`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("updates nameplate text and hides the dialog on OK", ...)`
+  - **Objective:** Validate dialog confirm behavior and formatted nameplate text.
+  - **Logic:** Sets username input, clicks OK, asserts dialog hidden and nameplate text is `"<John>"`.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** initApp, fake Babylon nameplate texture updates.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("falls back to <User 1> for blank input", ...)`
+  - **Objective:** Ensure blank input resolves to the anonymous default.
+  - **Logic:** Sets blank input, clicks OK, asserts nameplate text is `"<User 1>"`.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** initApp, fake Babylon nameplate texture updates.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("adds face and eyes on the front of the head", ...)`
+  - **Objective:** Validate face/eyes mesh existence and front placement.
+  - **Logic:** Boots app, inspects meshes, asserts face/eyes z positions are in front of the head center and eyes are black.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** initApp, fake Babylon mesh state.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+### File: `tests/iteration9.unit.test.ts`
+**File path:** `tests/iteration9.unit.test.ts`
+**Objective:** Unit tests for username resolution/formatting and avatar appearance colors.
+**Functions:**
+- **Function:** `it("resolves trimmed usernames and falls back to anonymous", ...)`
+  - **Objective:** Validate trimming and anonymous fallback.
+  - **Logic:** Calls `resolveUsername` with trimmed and blank inputs.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("formats usernames with angle brackets", ...)`
+  - **Objective:** Ensure nameplate text is formatted as `"<name>"`.
+  - **Logic:** Calls `formatUsername` and compares output.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("uses the default torso color and keeps it across pose updates", ...)`
+  - **Objective:** Validate default torso color and stability across poses.
+  - **Logic:** Creates avatar, inspects torso material color, calls `setPose`, and re-checks color.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** createPlayerAvatar, fake Babylon material.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("applies a creation-time torso color override", ...)`
+  - **Objective:** Verify torso color override is honored on creation.
+  - **Logic:** Creates avatar with `appearance.torsoColor` and inspects material color.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** createPlayerAvatar, fake Babylon material.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("applies face and eye material colors", ...)`
+  - **Objective:** Verify face/eye materials use the configured colors.
+  - **Logic:** Creates avatar and inspects face/eye material colors.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** createPlayerAvatar, fake Babylon material.
   - **Errors/Exceptions:** Assertions may throw.
   - **Performance notes:** O(1).
 

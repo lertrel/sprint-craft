@@ -11,3 +11,6 @@
 
 [Progress]
 - Iteration 8 - DONE (spec, implementation, tests, docs)
+
+[Progress]
+- Iteration 9 - DONE (spec, implementation, tests, docs)
