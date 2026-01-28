@@ -29,14 +29,16 @@ tests/
   iteration8.build.test.ts
   iteration8.integration.test.ts
   iteration8.unit.test.ts
+  iteration10.integration.test.ts
+  iteration10.unit.test.ts
   iteration9.integration.test.ts
   iteration9.unit.test.ts
 ```
 
 ### Counts
 - Folders: 2
-- Files: 20
-- Approximate number of functions in tests: ~354 (regex count of "function" and "=>" tokens in tests)
+- Files: 22
+- Approximate number of functions in tests: ~390 (regex count of "function" and "=>" tokens in tests)
 
 ## Program Document - Test Suite
 **Assumption:** The heading template from sys-doc is reused for tests. Each test case is listed as a function-like entry using its `it("...")` description, plus any helper functions defined in the file.
@@ -1372,3 +1374,100 @@ tests/
   - **Errors/Exceptions:** Assertions may throw.
   - **Performance notes:** O(1).
 
+### File: `tests/iteration10.unit.test.ts`
+**File path:** `tests/iteration10.unit.test.ts`
+**Objective:** Unit tests for protocol helpers, sync budgets, tick contract intervals, and diagnostics checksum.
+**Functions:**
+- **Function:** `it("creates envelopes with version and timestamps", ...)`
+  - **Objective:** Verify envelope helper produces versioned payloads.
+  - **Logic:** Calls `createEnvelope` and asserts `v`, `t`, and `ts`.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Uses shared protocol helpers.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("classifies volatile vs game-progress state keys", ...)`
+  - **Objective:** Validate state classification mapping.
+  - **Logic:** Calls `classifyState` for volatile and game-progress keys.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Uses protocol classification map.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("prevents sends within the minimum interval", ...)`
+  - **Objective:** Ensure budget gating blocks rapid sends.
+  - **Logic:** Uses `createSyncBudgetTracker` and asserts `canSend` behavior.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Budget tracker state.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("derives snapshot interval from the contract", ...)`
+  - **Objective:** Validate tick interval math.
+  - **Logic:** Calls `getTickIntervals` and asserts snapshot interval.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("produces deterministic checksums for identical input", ...)`
+  - **Objective:** Ensure checksum is deterministic.
+  - **Logic:** Calls `computeChecksum` multiple times on the same data and compares.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(N) over serialized length.
+
+### File: `tests/iteration10.integration.test.ts`
+**File path:** `tests/iteration10.integration.test.ts`
+**Objective:** Integration tests for protocol helpers and multiplayer session lifecycle.
+**Functions:**
+- **Function:** `makeAdapter(): { adapter: SessionAdapter; snapshots: RoomSnapshot[]; deltas: StateDelta[] }`
+  - **Objective:** Provide a minimal adapter for session tests.
+  - **Logic:** Returns an adapter with snapshot/delta collectors.
+  - **Parameters:** None.
+  - **Returns:** Adapter and captured arrays.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("creates envelopes and classifies state keys", ...)`
+  - **Objective:** Validate envelope helper and classification in integration scope.
+  - **Logic:** Calls `createEnvelope` and `classifyState`.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Protocol helpers.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("connects, sends hello, and handles welcome snapshots", ...)`
+  - **Objective:** Ensure session connect and welcome routing works.
+  - **Logic:** Connects a fake session, asserts `C_HELLO`, emits `S_WELCOME`, and checks snapshot capture.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Session state, diagnostics updates.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("updates ping diagnostics on pong", ...)`
+  - **Objective:** Verify ping RTT updates.
+  - **Logic:** Sends a ping, emits a pong, and asserts `lastPingMs`.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Uses fake timers and session diagnostics.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+
+- **Function:** `it("blocks rapid budgeted sends and computes intervals", ...)`
+  - **Objective:** Validate budget gating and tick interval calculation.
+  - **Logic:** Uses the budget tracker and tick contract helper.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Budget tracker state.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
