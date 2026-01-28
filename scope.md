@@ -1,30 +1,44 @@
-Theme: MVP2 - Preparation for multi-player phase (continue)
+Theme: MVP3 - Multi-player support in client-server architect with Colyseus integration
+
+Assumption:
+- Simple client-server architecture with minimum technology footprint
+- Colyseus integration to avoid re-inventing game server from scratch
+- No state persistence in this phase but prepare architecture for the next phase
+- Game states should be synchronized and eqaul for all game nodes (users)
+- Having conflict resolve for transactions generating from all game nodes (users)
+- Workload: 
+	- Internal use within same organization local network or VPN
+	- Maximum concurrent users 20
 
 Goals:
 
-Dynamic Username
+Technical design for game state and protocol to be synchronize {protocol}
 
-	⁃	When the game load at first, display a dialog box with label (Choose avatar name), textbox (user name), and button (OK) for user to choose avatar name. 
-	⁃	User can press OK with or without enter username, once pressed the dialog box disappears. Mark value from the textbox as {textbox-value}
-	⁃	{username} = trim({textbox-value})
-	⁃	If {username} is blank, {username} = getAnonymousUserName()
-	⁃	getAnonymousUserName is a mock function return ‘User 1’
-	⁃	In later phase, getAnonymousUserName will connect to a host server to obtain a unique anonymous user name.
-	⁃	Assign {username} to avatar’s nameplate from previous iteration
+	⁃	Identify game types of game state that shoud be synchronize e.g., player state, position, edit blocks, etc. Mark as {states}
+	⁃	Classify {states} and categorize them into 2 groups a) volatile states ({volatile-states}), b) game progress ({game-progress})
+	⁃	{volatile-states} are states that, when synchornized, will help another player interact with another player playing on different machine or browser tab (for debug), theses states will:
+	⁃	Be broadcasted through all user nodes (fire and forget)
+	⁃	Need optimization strategy (decide if this should be placed on server or client) mark as {state-optiomization}
+	⁃	Example of {state-optiomization} a) duplicate 
+	⁃	a) duplicate event e.g., same block is being removed from multiple nodes (users) concurrently
+	⁃	b) competing event e.g., block placing at the same position from multiple nodes (users) concurrently
+	⁃	c) outdate event e.g., attemp of removing block that already been removed by another node (user) due to lack of network
+	⁃	{game-progress} are states that, persist across game session, even when new user joined later that the others, his/her {game-progress} will equal to other nodes (users):
+	⁃	Component under {game-progress} should have universal identity across multiple nodes (users)
+	⁃	{game-progress} should be consistent across all nodes (users)
+	⁃	In next phase, {game-progress} should survive server restarting
+	⁃	{volatile-sates}, {game-progress}, {state-optiomization} are part of {protocol}
 
-Enhance Avatar Appearance
+Technical design for below aspects
 
-** Torso Color **
+The following aspects should be include and planned in one of suggested iterations
 
-	⁃	Torso should have different color with the test of the body to symbolize ‘cloth’. Choose color that can be easily differentiate from all blocks and sky as a default color for this phase. Mark it as {default-color}
-	⁃	Prepare option to specify avatar color when it first create
-	⁃	Assign {default-color} to the torso when the avatar firstly created
-	⁃	Unless explicitly re-assigned, torso color will not change even after re-spawn
-	⁃	No interface or command to change torso color in this phase
-	⁃	Torso color will not be persisted in local DB in this phase
+- {protocol}
+- Colyseus integration
+- Dead reckoning
+- Client-side preduction
+- State authority
+- Lag compensation
+- Auti-cheat
 
-** Face **
-
-	⁃	Frontal side of the head, should have different color than torso and the rest of the body to symbolize ‘face’. Verify if beige works or suggest a proper color
-	⁃	Place eyes on frontal side of the head (color black)
-
+The plan can have one or more iterations
