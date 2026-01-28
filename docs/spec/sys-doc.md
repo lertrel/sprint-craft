@@ -15,6 +15,14 @@ src/
   sprint-craft/
     app.ts
     input.ts
+    multiplayer/
+      adapters.ts
+      colyseus-client.ts
+      diagnostics.ts
+      session.ts
+      state-model.ts
+      sync-budget.ts
+      tick-contract.ts
     usernames.ts
     ui/
       crosshair.ts
@@ -74,14 +82,16 @@ tests/
   iteration8.build.test.ts
   iteration8.integration.test.ts
   iteration8.unit.test.ts
+  iteration10.integration.test.ts
+  iteration10.unit.test.ts
   iteration9.integration.test.ts
   iteration9.unit.test.ts
 ```
 
 ### Counts
-- Folders: 8 (src: 6, tests: 2)
-- Files: 55 (src: 35, tests: 20)
-- Approximate number of functions in src: ~323 (regex count of "function" and "=>" tokens in src)
+- Folders: 9 (src: 7, tests: 2)
+- Files: 64 (src: 42, tests: 22)
+- Approximate number of functions in src: ~406 (regex count of "function" and "=>" tokens in src)
 
 ## Program Document - Core Game Function
 **Assumption:** The exact heading template requested was not provided in the prompt; the format below uses the required bold labels (File path, Objective, Function, Objective, Logic, Parameters, Returns, Side effects & dependencies, Errors/Exceptions, Performance notes).
@@ -113,9 +123,9 @@ tests/
 
 - **Function:** `initApp(options: InitAppOptions): AppHandle`
   - **Objective:** Create the full game runtime: HUD, input, camera, world, render loop, and cleanup hooks.
-  - **Logic:** Validates HUD elements, builds toast/hotbar/crosshair, creates input state, configures pointer lock and mouse look, wires the branding splash hide-on-first-input behavior, instantiates Babylon engine/scene/camera, sets camera parameters, creates the voxel demo, installs the username dialog to resolve and format the nameplate text, starts the render loop with delta time calculation, installs resize and visibility handlers, optionally creates debug lighting, and returns an `AppHandle` with `dispose`.
-  - **Parameters:** `options` (`{ babylon: BabylonApi; canvas: HTMLCanvasElement; document: Document; window: Window; enableDebugGround?: boolean; onLog?: (msg: string) => void }`)
-  - **Returns:** `AppHandle` - `{ engine, scene, camera, input, getFrameCount, dispose }`.
+  - **Logic:** Validates HUD elements, builds toast/hotbar/crosshair, creates input state, configures pointer lock and mouse look, wires the branding splash hide-on-first-input behavior, instantiates Babylon engine/scene/camera, sets camera parameters, creates the voxel demo, installs the username dialog to resolve and format the nameplate text, optionally initializes a multiplayer session when enabled, starts the render loop with delta time calculation, installs resize and visibility handlers, optionally creates debug lighting, and returns an `AppHandle` with `dispose`.
+  - **Parameters:** `options` (`{ babylon: BabylonApi; canvas: HTMLCanvasElement; document: Document; window: Window; enableDebugGround?: boolean; onLog?: (msg: string) => void; enableMultiplayer?: boolean; multiplayerUrl?: string; multiplayerRoomName?: string; multiplayerDiagnostics?: boolean }`)
+  - **Returns:** `AppHandle` - `{ engine, scene, camera, input, getFrameCount, getMultiplayer, dispose }`.
   - **Side effects & dependencies:** DOM queries and mutations, event listeners for pointer lock, focus/blur, visibility, resize; creates Babylon engine/scene/camera; starts render loop; calls `console.info`.
   - **Errors/Exceptions:** Throws `Error` if required HUD elements are missing. Babylon constructors or DOM APIs may throw if misconfigured.
   - **Performance notes:** The render loop runs every frame; per-frame work includes input processing, voxel tick, and scene render.
@@ -146,6 +156,24 @@ tests/
   - **Side effects & dependencies:** DOM reads/writes, `console.error`, creation of banner elements.
   - **Errors/Exceptions:** Catches initialization errors internally and does not rethrow.
   - **Performance notes:** Constant time; called once on startup.
+
+- **Function:** `resolveMultiplayerEnabled(options: InitAppOptions, window: Window): boolean`
+  - **Objective:** Determine whether multiplayer should be enabled.
+  - **Logic:** Uses explicit `enableMultiplayer` when provided; otherwise checks `?mp=1` in URL search params.
+  - **Parameters:** `options` (`InitAppOptions`), `window` (`Window`)
+  - **Returns:** `boolean`.
+  - **Side effects & dependencies:** Reads `window.location.search`.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `resolveMultiplayerUrl(window: Window): string`
+  - **Objective:** Resolve the websocket URL for multiplayer connections.
+  - **Logic:** Converts the current origin to `ws://` or `wss://`, falling back to localhost.
+  - **Parameters:** `window` (`Window`)
+  - **Returns:** `string`.
+  - **Side effects & dependencies:** Reads `window.location.origin`.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
 
 ### File: `src/sprint-craft/input.ts`
 **File path:** `src/sprint-craft/input.ts`
@@ -1275,4 +1303,124 @@ tests/
   - **Side effects & dependencies:** Mutates chunk data; may allocate a chunk.
   - **Errors/Exceptions:** None.
   - **Performance notes:** O(1) plus allocation if chunk absent.
+
+### File: `src/sprint-craft/multiplayer/adapters.ts`
+**File path:** `src/sprint-craft/multiplayer/adapters.ts`
+**Objective:** Define the adapter surface between the game loop and multiplayer session.
+**Functions:**
+- None (type-only module defining `SessionAdapter`).
+
+### File: `src/sprint-craft/multiplayer/colyseus-client.ts`
+**File path:** `src/sprint-craft/multiplayer/colyseus-client.ts`
+**Objective:** Wrap Colyseus client construction with a minimal interface for injection/testing.
+**Functions:**
+- **Function:** `createColyseusClient(options: { url: string; client?: ClientLike }): ColyseusClient`
+  - **Objective:** Create a Colyseus client wrapper that exposes `joinOrCreate`.
+  - **Logic:** Uses the provided client or constructs a new `Client` from `colyseus.js`.
+  - **Parameters:** `options` (`{ url: string; client?: ClientLike }`)
+  - **Returns:** `ColyseusClient`.
+  - **Side effects & dependencies:** Instantiates a Colyseus client when `client` is not provided.
+  - **Errors/Exceptions:** Propagates errors from `Client` construction.
+  - **Performance notes:** O(1) setup.
+
+### File: `src/sprint-craft/multiplayer/diagnostics.ts`
+**File path:** `src/sprint-craft/multiplayer/diagnostics.ts`
+**Objective:** Provide checksum, ping tracking, and snapshot-age diagnostics for multiplayer.
+**Functions:**
+- **Function:** `computeChecksum(data: unknown): number`
+  - **Objective:** Produce a deterministic checksum for the provided data.
+  - **Logic:** Stable stringifies input and applies FNV-1a hashing.
+  - **Parameters:** `data` (`unknown`)
+  - **Returns:** `number`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(N) over serialized length.
+
+- **Function:** `createDiagnostics(options?: { enabled?: boolean }): DiagnosticsHandle`
+  - **Objective:** Create a diagnostics handle to record ping, server tick, and checksum stats.
+  - **Logic:** Tracks internal counters, updates stats on record calls, and exposes `getStats`.
+  - **Parameters:** `options` (`{ enabled?: boolean }`, optional)
+  - **Returns:** `DiagnosticsHandle`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1) updates per call.
+
+### File: `src/sprint-craft/multiplayer/session.ts`
+**File path:** `src/sprint-craft/multiplayer/session.ts`
+**Objective:** Create a client multiplayer session that joins a room and routes messages to adapters.
+**Functions:**
+- **Function:** `createMultiplayerSession(options: MultiplayerSessionOptions): MultiplayerSession`
+  - **Objective:** Join a Colyseus room, wire message handlers, and expose session controls.
+  - **Logic:** Connects via the provided client, sends `C_HELLO`, handles snapshots/deltas/pongs, and emits diagnostics updates.
+  - **Parameters:** `options` (`{ client: ColyseusClient; adapter: SessionAdapter; roomName?: string; diagnostics?: DiagnosticsHandle; tickContract?: TickContract; logger?: (message: string) => void }`)
+  - **Returns:** `MultiplayerSession` - exposes `connect`, `disconnect`, `tick`, and `getDiagnostics`.
+  - **Side effects & dependencies:** Sends room messages; updates diagnostics; uses Colyseus client.
+  - **Errors/Exceptions:** Propagates connection errors from the underlying client.
+  - **Performance notes:** Per-tick ping checks are O(1).
+
+### File: `src/sprint-craft/multiplayer/state-model.ts`
+**File path:** `src/sprint-craft/multiplayer/state-model.ts`
+**Objective:** Convert local single-player state into multiplayer-ready schemas.
+**Functions:**
+- **Function:** `toPlayerVolatile(input: PlayerVolatileInput): PlayerVolatile`
+  - **Objective:** Map player position/velocity/yaw/stance into the volatile player schema.
+  - **Logic:** Copies the player state fields and adds yaw/pitch/grounded metadata.
+  - **Parameters:** `input` (`PlayerVolatileInput`)
+  - **Returns:** `PlayerVolatile`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `toPlayerProgress(input: PlayerProgressInput): PlayerProgress`
+  - **Objective:** Map player identity and appearance into the progress schema.
+  - **Logic:** Returns the provided id/name/appearance and derives `joinedAt` when missing.
+  - **Parameters:** `input` (`PlayerProgressInput`)
+  - **Returns:** `PlayerProgress`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `makeWorldEvent(input: WorldEventInput): WorldEvent`
+  - **Objective:** Build a deterministic world event from block edit inputs.
+  - **Logic:** Generates an event id when missing and copies coordinates/metadata.
+  - **Parameters:** `input` (`WorldEventInput`)
+  - **Returns:** `WorldEvent`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+- **Function:** `toRoomSnapshot(input: SnapshotInput): RoomSnapshot`
+  - **Objective:** Build a room snapshot from provided state collections.
+  - **Logic:** Returns the input fields as a `RoomSnapshot`.
+  - **Parameters:** `input` (`SnapshotInput`)
+  - **Returns:** `RoomSnapshot`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+
+### File: `src/sprint-craft/multiplayer/sync-budget.ts`
+**File path:** `src/sprint-craft/multiplayer/sync-budget.ts`
+**Objective:** Provide a sync-budget tracker for throttling state updates.
+**Functions:**
+- **Function:** `createSyncBudgetTracker(budgets?: Record<StateKey, SyncBudget>): SyncBudgetTracker`
+  - **Objective:** Create a tracker that enforces per-state minimum intervals and bursts.
+  - **Logic:** Tracks send timestamps and window counters per state key.
+  - **Parameters:** `budgets` (`Record<StateKey, SyncBudget>`, optional)
+  - **Returns:** `SyncBudgetTracker` - exposes `canSend`, `recordSent`, and `getState`.
+  - **Side effects & dependencies:** Maintains internal counters.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1) per check.
+
+### File: `src/sprint-craft/multiplayer/tick-contract.ts`
+**File path:** `src/sprint-craft/multiplayer/tick-contract.ts`
+**Objective:** Define tick alignment defaults and interval helpers.
+**Functions:**
+- **Function:** `getTickIntervals(contract?: TickContract): TickIntervals`
+  - **Objective:** Convert tick rates into millisecond intervals.
+  - **Logic:** Divides 1000 by each rate and rounds to integers.
+  - **Parameters:** `contract` (`TickContract`, optional)
+  - **Returns:** `TickIntervals`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
 
