@@ -32,10 +32,12 @@ const htmlWithBuildStamp = htmlWithStandaloneScript.replace(
 await writeFile(outHtmlPath, htmlWithBuildStamp, "utf8");
 
 // Create a true single-file HTML by inlining the JS bundle.
+// Note: Use a function for replacement to avoid interpreting special patterns
+// like $& in the bundle (which would be replaced with the matched string).
 const bundle = await readFile(bundlePath, "utf8");
 const singleFileHtml = htmlWithBuildStamp.replace(
   '<script src="./sprint-craft.js"></script>',
-  `<script>\n${bundle}\n</script>`
+  () => `<script>\n${bundle}\n</script>`
 );
 
 await writeFile(outSinglePath, singleFileHtml, "utf8");
