@@ -22,8 +22,28 @@ export function createColyseusClient(options: {
   url: string;
   client?: ClientLike;
 }): ColyseusClient {
-  const client = options.client ?? new Client(options.url);
+  const client = options.client;
+  if (client) {
+    // If a ClientLike is provided, use it directly (already returns RoomLike)
+    return {
+      joinOrCreate: (roomName: string, opts?: unknown) => client.joinOrCreate(roomName, opts)
+    };
+  }
+
+  // Use real Colyseus client and adapt Room to RoomLike
+  const realClient = new Client(options.url);
   return {
-    joinOrCreate: (roomName: string, opts?: unknown) => client.joinOrCreate(roomName, opts)
+    joinOrCreate: async (roomName: string, opts?: unknown): Promise<RoomLike> => {
+      const room = await realClient.joinOrCreate(roomName, opts);
+      return {
+        id: room.roomId,
+        name: room.name,
+        send: (type, message) => room.send(type, message),
+        onMessage: (type, cb) => room.onMessage(type, cb),
+        onStateChange: (cb) => room.onStateChange(cb),
+        onLeave: (cb) => room.onLeave(cb),
+        leave: async () => { await room.leave(); },
+      };
+    }
   };
 }
