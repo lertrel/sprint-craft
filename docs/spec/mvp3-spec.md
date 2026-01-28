@@ -90,6 +90,90 @@ TEST 1
 - Concept: Unit tests for round-trip encode/decode and correct volatile/game-progress tagging.
 - Other Important Remarks: No network required; pure schema tests.
 
+Draft - Canonical message types, state schemas, classification
+
+Canonical Envelope
+```
+Envelope<T> = {
+  v: number,
+  t: MsgType,
+  ts: number,
+  clientId?: string,
+  serverTick?: number,
+  seq?: number,
+  payload: T
+}
+```
+
+Client -> Server (examples)
+```
+C_HELLO = { name: string, appearance?: Appearance, clientBuild?: string }
+C_INPUT = { frameSeq: number, dt: number, keys: string[], yaw: number, pitch: number }
+C_BLOCK_EDIT = { editSeq: number, action: "break"|"place", hit: HitInfo, blockId?: number, clientTs: number }
+C_PING = { pingId: number, clientTs: number }
+```
+
+Server -> Client (examples)
+```
+S_WELCOME = { playerId: string, tickRate: number, worldSeed: number, snapshot: RoomSnapshot }
+S_STATE_SNAPSHOT = RoomSnapshot
+S_STATE_DELTA = { players: PlayerVolatile[], removedPlayerIds: string[], worldEvents: WorldEvent[] }
+S_BLOCK_RESULT = { editSeq: number, ok: boolean, reason?: string, event?: WorldEvent }
+S_CORRECTION = { playerId: string, pos: Vec3, vel: Vec3, yaw: number, serverTick: number }
+S_PONG = { pingId: number, serverTs: number }
+S_PLAYER_JOIN = { player: PlayerProgress }
+S_PLAYER_LEAVE = { playerId: string, reason?: string }
+```
+
+State schemas (draft)
+```
+Vec3 = { x: number, y: number, z: number }
+
+PlayerVolatile = {
+  id: string,
+  pos: Vec3,
+  vel: Vec3,
+  yaw: number,
+  pitch: number,
+  stance: "standing"|"crouching"|"crawling",
+  grounded: boolean
+}
+
+PlayerProgress = {
+  id: string,
+  name: string,
+  appearance?: {
+    torsoColor?: [number, number, number],
+    faceColor?: [number, number, number],
+    eyeColor?: [number, number, number]
+  },
+  joinedAt: number
+}
+
+WorldEvent = {
+  eventId: string,
+  action: "break"|"place",
+  pos: { x: number, y: number, z: number },
+  blockId?: number,
+  clientId: string,
+  clientSeq?: number,
+  clientTs?: number,
+  serverTick: number
+}
+
+RoomSnapshot = {
+  serverTick: number,
+  worldSeed: number,
+  players: PlayerProgress[],
+  playerStates: PlayerVolatile[],
+  worldEvents: WorldEvent[]
+}
+```
+
+Classification (draft)
+- Volatile states: player transform (pos/vel/yaw/pitch/stance/grounded), animation cues, aim/target/preview, input frames, ping/latency metrics.
+- Game-progress: world edits (authoritative), world seed/generation params, player identity (id/name/appearance), server config/versioning.
+
 Activity 2 - Colyseus client/server integration architecture
 
 NEW 1 - /workspace/server/src/index.ts
