@@ -11,6 +11,10 @@ import { createUsernameDialog } from "./ui/username-dialog";
 import { createDebugGround } from "./world/debug-ground";
 import { createVoxelDemo } from "./voxels/voxel-demo";
 import { formatUsername, resolveUsername } from "./usernames";
+import type { MultiplayerSession } from "./multiplayer/session";
+import type { SessionAdapter } from "./multiplayer/adapters";
+import { createDiagnostics } from "./multiplayer/diagnostics";
+import { toPlayerProgress, toPlayerVolatile } from "./multiplayer/state-model";
 
 export type BabylonApi = {
   // Intentionally permissive so real Babylon classes are assignable under TS strict mode.
@@ -72,6 +76,10 @@ export type InitAppOptions = {
   window: Window;
   enableDebugGround?: boolean;
   onLog?: (msg: string) => void;
+  enableMultiplayer?: boolean;
+  multiplayerUrl?: string;
+  multiplayerRoomName?: string;
+  multiplayerDiagnostics?: boolean;
 };
 
 export type AppHandle = {
@@ -80,6 +88,7 @@ export type AppHandle = {
   camera: CameraLike;
   input: InputState;
   getFrameCount: () => number;
+  getMultiplayer: () => MultiplayerSession | null;
   dispose: () => void;
 };
 
@@ -252,11 +261,72 @@ export function initApp(options: InitAppOptions): AppHandle {
     rebuildBudgetPerFrame: 2
   });
 
+  const multiplayerEnabled = resolveMultiplayerEnabled(options, window);
+  const multiplayerRoomName = options.multiplayerRoomName ?? "sprint-craft";
+  const multiplayerDiagnostics = createDiagnostics({
+    enabled: options.multiplayerDiagnostics ?? true
+  });
+  let multiplayer: MultiplayerSession | null = null;
+  let multiplayerInit: Promise<void> | null = null;
+  const joinedAtMs = Date.now();
+  let currentUsername = resolveUsername("");
+  const adapter: SessionAdapter = {
+    getLocalPlayerProgress: () =>
+      toPlayerProgress({
+        id: "local",
+        name: currentUsername,
+        joinedAt: joinedAtMs
+      }),
+    getLocalPlayerVolatile: () => {
+      const player = voxelDemo.getPlayerState();
+      const yaw = camera.rotation?.y ?? 0;
+      const pitch = camera.rotation?.x ?? 0;
+      return toPlayerVolatile({
+        id: "local",
+        state: player,
+        yaw,
+        pitch,
+        grounded: player.velocity.y === 0,
+        hotbarSlot: hotbar.getSelected()
+      });
+    },
+    applySnapshot: () => {
+      multiplayerDiagnostics.recordSnapshotAt(Date.now());
+    },
+    applyDelta: () => {
+      multiplayerDiagnostics.recordSnapshotAt(Date.now());
+    }
+  };
+  if (multiplayerEnabled) {
+    multiplayerInit = Promise.all([
+      import("./multiplayer/session"),
+      import("./multiplayer/colyseus-client")
+    ])
+      .then(async ([sessionModule, clientModule]) => {
+        const { createMultiplayerSession } = sessionModule;
+        const { createColyseusClient } = clientModule;
+        const url = options.multiplayerUrl ?? resolveMultiplayerUrl(window);
+        const client = createColyseusClient({ url });
+        multiplayer = createMultiplayerSession({
+          client,
+          adapter,
+          diagnostics: multiplayerDiagnostics,
+          roomName: multiplayerRoomName,
+          logger: log
+        });
+        await multiplayer.connect();
+      })
+      .catch((err) => {
+        log(`Multiplayer init failed: ${err instanceof Error ? err.message : String(err)}`);
+      });
+  }
+
   const usernameDialog = createUsernameDialog({
     document,
     container: hudEl,
     onConfirm: (value) => {
       const resolved = resolveUsername(value);
+      currentUsername = resolved;
       voxelDemo.setPlayerName(formatUsername(resolved));
     }
   });
@@ -272,6 +342,7 @@ export function initApp(options: InitAppOptions): AppHandle {
       lastNowMs === null ? 1 / 60 : Math.max(0, (nowMs - lastNowMs) / 1000);
     lastNowMs = nowMs;
     const dtSec = Number.isFinite(dtSecRaw) && dtSecRaw > 0 ? dtSecRaw : 1 / 60;
+    multiplayer?.tick(nowMs);
     voxelDemo.tick(dtSec);
     scene.render();
     input.endFrame();
@@ -295,6 +366,7 @@ export function initApp(options: InitAppOptions): AppHandle {
     camera,
     input,
     getFrameCount: () => frameCount,
+    getMultiplayer: () => multiplayer,
     dispose: () => {
       document.removeEventListener("pointerlockchange", onLockChange);
       canvas.removeEventListener("focus", updatePreventDefaults);
@@ -311,11 +383,33 @@ export function initApp(options: InitAppOptions): AppHandle {
       voxelDemo.dispose();
       crosshair.dispose();
       usernameDialog.dispose();
+      if (multiplayerInit) {
+        multiplayerInit
+          .then(() => multiplayer?.disconnect())
+          .catch(() => null);
+      }
       window.removeEventListener("resize", onResize);
       scene.dispose?.();
       engine.dispose?.();
     }
   };
+}
+
+function resolveMultiplayerEnabled(options: InitAppOptions, window: Window): boolean {
+  if (typeof options.enableMultiplayer === "boolean") return options.enableMultiplayer;
+  const params = new URLSearchParams(window.location.search);
+  return params.get("mp") === "1";
+}
+
+function resolveMultiplayerUrl(window: Window): string {
+  const origin = window.location.origin;
+  if (origin.startsWith("https://")) {
+    return origin.replace("https://", "wss://");
+  }
+  if (origin.startsWith("http://")) {
+    return origin.replace("http://", "ws://");
+  }
+  return "ws://localhost:2567";
 }
 
 export function initAppFromDom(options: { babylon: BabylonApi }): AppHandle | null {
