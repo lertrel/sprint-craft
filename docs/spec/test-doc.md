@@ -13,6 +13,8 @@ tests/
   fakes/
     fake-babylon.ts
   input.unit.test.ts
+  iteration11.integration.test.ts
+  iteration11.unit.test.ts
   iteration1.integration.test.ts
   iteration2.integration.test.ts
   iteration2.unit.test.ts
@@ -37,7 +39,7 @@ tests/
 
 ### Counts
 - Folders: 2
-- Files: 22
+- Files: 27
 - Approximate number of functions in tests: ~390 (regex count of "function" and "=>" tokens in tests)
 
 ## Program Document - Test Suite
@@ -1435,6 +1437,48 @@ tests/
   - **Side effects & dependencies:** None.
   - **Errors/Exceptions:** None.
   - **Performance notes:** O(1).
+
+### File: `tests/iteration11.unit.test.ts`
+**File path:** `tests/iteration11.unit.test.ts`
+**Objective:** Unit tests for prediction reconciliation, dead reckoning interpolation, and harness determinism.
+**Functions:**
+- **Function:** `it("reconciles to authoritative state and trims frames", ...)`
+  - **Objective:** Validate prediction buffer trimming and reconciliation behavior.
+  - **Logic:** Applies input frames, then reconciles against a server state and asserts state reset.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Uses prediction helpers and player simulation.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(F) in frame count.
+- **Function:** `it("interpolates between samples within delay window", ...)`
+  - **Objective:** Validate dead reckoning interpolation.
+  - **Logic:** Pushes samples and asserts interpolated position.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Uses dead reckoning helper.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1).
+- **Function:** `it("produces deterministic metrics for identical input streams", ...)`
+  - **Objective:** Ensure harness outputs deterministic metrics.
+  - **Logic:** Runs the harness twice and compares results.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Uses prediction harness.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(F).
+
+### File: `tests/iteration11.integration.test.ts`
+**File path:** `tests/iteration11.integration.test.ts`
+**Objective:** Integration tests for movement input send and correction application.
+**Functions:**
+- **Function:** `it("sends input frames and reconciles on correction", ...)`
+  - **Objective:** Validate end-to-end C_INPUT send and S_CORRECTION handling.
+  - **Logic:** Uses a fake room/client to capture input messages and apply corrections.
+  - **Parameters:** Test callback.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Uses multiplayer session + prediction helpers.
+  - **Errors/Exceptions:** Assertions may throw.
+  - **Performance notes:** O(1) for test scope.
 
 - **Function:** `it("creates envelopes and classifies state keys", ...)`
   - **Objective:** Validate envelope helper and classification in integration scope.

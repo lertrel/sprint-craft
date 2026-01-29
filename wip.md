@@ -45,5 +45,13 @@ State sync is diagnostic-only - The applySnapshot/applyDelta callbacks only reco
 
 Both connect to the server ✓
 Both appear in the room's player list on the server ✓
-See each other's avatars ✗
-Sync positions ✗
+See each other's avatars ✓
+Sync positions ✓
+
+[Progress]
+- Iteration 11 - DONE (spec, implementation, tests, docs)
+Activity 3 - Player movement replication (prediction, reconciliation, dead reckoning)
+Activity 9 - Prediction tuning harness + physics parity checklist
+Remote player management and avatar updates via S_STATE_DELTA
+Server authoritative movement processing with corrections (C_INPUT/S_CORRECTION)
+Iteration 11 unit, integration, server, multi-client, headless tests added and passing
