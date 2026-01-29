@@ -30,3 +30,20 @@ Key Deliverables
 7	shared/state-ownership.ts, sync-budget.ts
 8	tick-contract.ts, adapters.ts
 
+NOT see avatars from another tab yet with the current Iteration 10 implementation.
+
+
+Both clients connect to the same Colyseus room
+Both send C_HELLO with their player name
+Both receive S_WELCOME and can exchange pings (C_PING/S_PONG)
+The server tracks that both players joined
+What is NOT implemented yet:
+
+Player position is not sent to the server - The client doesn't broadcast its position/velocity/yaw/pitch
+Remote player rendering doesn't exist - Even if positions were shared, there's no code to spawn and animate avatars for other players
+State sync is diagnostic-only - The applySnapshot/applyDelta callbacks only record stats, they don't update game state
+
+Both connect to the server ✓
+Both appear in the room's player list on the server ✓
+See each other's avatars ✗
+Sync positions ✗
