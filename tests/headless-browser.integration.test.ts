@@ -9,6 +9,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import type {
   HelloPayload,
+  InputFrame,
   PingPayload,
   PongPayload,
   RoomSnapshot,
@@ -23,6 +24,9 @@ import type { SessionAdapter } from "../src/sprint-craft/multiplayer/adapters";
 import { createDiagnostics, computeChecksum } from "../src/sprint-craft/multiplayer/diagnostics";
 import { createSyncBudgetTracker } from "../src/sprint-craft/multiplayer/sync-budget";
 import { DEFAULT_TICK_CONTRACT, getTickIntervals } from "../src/sprint-craft/multiplayer/tick-contract";
+import { createDefaultPlayerState } from "../src/sprint-craft/voxels/player-state";
+import { applyInputFrame } from "../src/sprint-craft/voxels/player-controller";
+import { createPredictionBuffer, recordInputFrame, reconcilePrediction } from "../src/sprint-craft/multiplayer/prediction";
 
 /**
  * Mock WebSocket that simulates browser WebSocket behavior
@@ -458,6 +462,101 @@ describe("Headless Browser Integration: Message Handling", () => {
     expect(stats.lastPingMs).toBeGreaterThanOrEqual(0);
 
     vi.restoreAllMocks();
+  });
+
+  it("sends C_INPUT frames and applies corrections", async () => {
+    const localState = createDefaultPlayerState("browser-correct");
+    let grounded = true;
+    const buffer = createPredictionBuffer();
+    const getVoxel = (_wx: number, wy: number, _wz: number) => (wy <= 0 ? 1 : 0);
+
+    const adapter: SessionAdapter = {
+      getLocalPlayerProgress: () => ({
+        id: "browser-correct",
+        name: "BrowserCorrect",
+        joinedAt: Date.now()
+      }),
+      getLocalPlayerVolatile: () => ({
+        id: localState.playerId,
+        pos: { ...localState.position },
+        vel: { ...localState.velocity },
+        yaw: 0,
+        pitch: 0,
+        stance: localState.stance,
+        grounded
+      }),
+      collectInputFrame: (seq, _nowMs, dtSec) => {
+        const frame: InputFrame = {
+          seq,
+          dtSec,
+          keysDown: ["KeyW"],
+          keysPressed: [],
+          yaw: 0,
+          pitch: 0,
+          clientState: {
+            id: localState.playerId,
+            pos: { ...localState.position },
+            vel: { ...localState.velocity },
+            yaw: 0,
+            pitch: 0,
+            stance: localState.stance,
+            grounded
+          }
+        };
+        recordInputFrame(buffer, frame);
+        const result = applyInputFrame({
+          state: localState,
+          frame,
+          grounded,
+          getVoxel,
+          respawn: () => {}
+        });
+        grounded = result.grounded;
+        return frame;
+      },
+      applySnapshot: () => {},
+      applyDelta: () => {},
+      applyCorrection: (correction) => {
+        const result = reconcilePrediction({
+          state: localState,
+          grounded,
+          serverState: correction.state,
+          ackSeq: correction.ackSeq,
+          pendingFrames: buffer.pendingFrames,
+          getVoxel,
+          respawn: () => {}
+        });
+        grounded = result.grounded;
+        buffer.pendingFrames = result.pendingFrames;
+      }
+    };
+
+    const session = createMultiplayerSession({ client: colyseusClient, adapter });
+    await session.connect();
+    const room = mockClient.getAllRooms()[0];
+
+    session.tick(0);
+    session.tick(50);
+    const inputMsg = room.sentMessages.find((m) => m.type === "C_INPUT");
+    expect(inputMsg).toBeDefined();
+
+    room.emitMessage("S_CORRECTION", {
+      playerId: "browser-correct",
+      serverTick: 1,
+      state: {
+        id: "browser-correct",
+        pos: { x: 0, y: 6, z: 0 },
+        vel: { x: 0, y: 0, z: 0 },
+        yaw: 0,
+        pitch: 0,
+        stance: "standing",
+        grounded: true
+      },
+      ackSeq: 1,
+      reason: "divergence"
+    });
+
+    expect(localState.position.z).toBeGreaterThanOrEqual(0);
   });
 });
 

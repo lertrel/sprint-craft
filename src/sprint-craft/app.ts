@@ -273,7 +273,7 @@ export function initApp(options: InitAppOptions): AppHandle {
   const adapter: SessionAdapter = {
     getLocalPlayerProgress: () =>
       toPlayerProgress({
-        id: "local",
+        id: voxelDemo.getLocalPlayerId(),
         name: currentUsername,
         joinedAt: joinedAtMs
       }),
@@ -282,7 +282,7 @@ export function initApp(options: InitAppOptions): AppHandle {
       const yaw = camera.rotation?.y ?? 0;
       const pitch = camera.rotation?.x ?? 0;
       return toPlayerVolatile({
-        id: "local",
+        id: player.playerId,
         state: player,
         yaw,
         pitch,
@@ -290,11 +290,24 @@ export function initApp(options: InitAppOptions): AppHandle {
         hotbarSlot: hotbar.getSelected()
       });
     },
-    applySnapshot: () => {
-      multiplayerDiagnostics.recordSnapshotAt(Date.now());
+    collectInputFrame: (seq, nowMs, dtSec) => {
+      const frame = voxelDemo.collectInputFrame(seq, dtSec, nowMs);
+      voxelDemo.recordInputFrame(frame);
+      return frame;
     },
-    applyDelta: () => {
+    setLocalPlayerId: (id) => {
+      voxelDemo.setLocalPlayerId(id);
+    },
+    applySnapshot: (snapshot) => {
       multiplayerDiagnostics.recordSnapshotAt(Date.now());
+      voxelDemo.applySnapshot(snapshot, Date.now());
+    },
+    applyDelta: (delta) => {
+      multiplayerDiagnostics.recordSnapshotAt(Date.now());
+      voxelDemo.applyDelta(delta, Date.now());
+    },
+    applyCorrection: (correction) => {
+      voxelDemo.applyCorrection(correction);
     }
   };
   if (multiplayerEnabled) {

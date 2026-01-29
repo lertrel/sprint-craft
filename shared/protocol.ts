@@ -103,6 +103,20 @@ export type PingPayload = {
   clientTs: number;
 };
 
+export type InputFrame = {
+  seq: number;
+  dtSec: number;
+  keysDown: string[];
+  keysPressed: string[];
+  yaw: number;
+  pitch: number;
+  clientState?: PlayerVolatile;
+};
+
+export type InputPayload = {
+  frames: InputFrame[];
+};
+
 export type PongPayload = {
   pingId: number;
   serverTs: number;
@@ -113,6 +127,14 @@ export type WelcomePayload = {
   tickRate: number;
   worldSeed: number;
   snapshot: RoomSnapshot;
+};
+
+export type CorrectionPayload = {
+  playerId: string;
+  serverTick: number;
+  state: PlayerVolatile;
+  ackSeq?: number;
+  reason?: string;
 };
 
 export type StateKey =
