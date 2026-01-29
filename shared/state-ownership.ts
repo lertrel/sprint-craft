@@ -17,14 +17,14 @@ export type OwnershipEntry = {
 };
 
 export const STATE_OWNERSHIP_MATRIX: Record<StateKey, OwnershipEntry> = {
-  playerVolatile: { owner: STATE_OWNERSHIP.playerVolatile, class: classifyState("playerVolatile") },
-  playerProgress: { owner: STATE_OWNERSHIP.playerProgress, class: classifyState("playerProgress") },
-  worldEvents: { owner: STATE_OWNERSHIP.worldEvents, class: classifyState("worldEvents") },
-  worldSeed: { owner: STATE_OWNERSHIP.worldSeed, class: classifyState("worldSeed") },
-  inputFrames: { owner: STATE_OWNERSHIP.inputFrames, class: classifyState("inputFrames") },
-  aimTarget: { owner: STATE_OWNERSHIP.aimTarget, class: classifyState("aimTarget") }
+  playerVolatile: { owner: "client", class: classifyState("playerVolatile") },
+  playerProgress: { owner: "server", class: classifyState("playerProgress") },
+  worldEvents: { owner: "server", class: classifyState("worldEvents") },
+  worldSeed: { owner: "server", class: classifyState("worldSeed") },
+  inputFrames: { owner: "client", class: classifyState("inputFrames") },
+  aimTarget: { owner: "client", class: classifyState("aimTarget") }
 };
 
 export function getStateOwner(key: StateKey): StateOwner {
-  return STATE_OWNERSHIP[key];
+  return STATE_OWNERSHIP[key]!;
 }
