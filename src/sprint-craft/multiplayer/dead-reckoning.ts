@@ -55,14 +55,18 @@ export function createDeadReckoner(options: DeadReckoningOptions): DeadReckoner 
 
 function getOlderSample(samples: DeadReckoningSample[], timeMs: number) {
   for (let i = samples.length - 1; i >= 0; i -= 1) {
-    if (samples[i].timeMs <= timeMs) return samples[i];
+    const sample = samples[i];
+    if (!sample) continue;
+    if (sample.timeMs <= timeMs) return sample;
   }
   return null;
 }
 
 function getNewerSample(samples: DeadReckoningSample[], timeMs: number) {
   for (let i = 0; i < samples.length; i += 1) {
-    if (samples[i].timeMs >= timeMs) return samples[i];
+    const sample = samples[i];
+    if (!sample) continue;
+    if (sample.timeMs >= timeMs) return sample;
   }
   return null;
 }
