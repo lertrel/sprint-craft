@@ -409,6 +409,14 @@ Iteration 10
 - Add initial diagnostics hooks (checksum, ping, basic stats).
 - Add Iteration 10 unit/integration tests for protocol + session lifecycle.
 
+List of activities implemented under this iteration
+
+Activity 1 - Multiplayer state model & protocol definition (shared protocol, state schemas, classification of {volatile-states} vs {game-progress})
+Activity 2 - Colyseus client/server integration architecture (server bootstrap, room skeleton, client session wiring)
+Activity 6 - Multiplayer debugging + validation plan (initial diagnostics hooks: checksum, ping, basic stats) [partial implementation]
+Activity 7 - State sync budget + ownership matrix (sync budgets and ownership matrix baseline)
+Activity 8 - Client/server integration seam + tick alignment contract (tick alignment contract and adapter seam)
+
 Iteration 11
 - Implement movement replication: prediction, reconciliation, dead reckoning.
 - Add remote player management and avatar updates.
