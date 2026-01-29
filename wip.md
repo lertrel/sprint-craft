@@ -55,3 +55,22 @@ Activity 9 - Prediction tuning harness + physics parity checklist
 Remote player management and avatar updates via S_STATE_DELTA
 Server authoritative movement processing with corrections (C_INPUT/S_CORRECTION)
 Iteration 11 unit, integration, server, multi-client, headless tests added and passing
+
+Refactored the server to be buildable independently of /src and made a clean production build path for Lightsail.
+
+What changed (highb
+
+Server no longer imports any client code from /src.
+Added serverb
+Added a serverb
+Added build:server + start:server scripts and @types/node.
+Key files updated/added:
+
+server/src/movement.ts (serverb
+server/src/config.ts (tick/snapshot config)
+server/src/rooms/SprintCraftRoom.ts (uses server movement/config)
+server/src/index.ts (uses ws transport correctly)
+server/tsconfig.json (server build)
+server/package.json (type: "commonjs")
+shared/state-ownership.ts (strict-safe access)
+package.json + package-lock.json (build:server, start:server, @types/node)
