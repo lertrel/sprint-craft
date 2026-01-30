@@ -5,17 +5,35 @@
  * verifying proper state synchronization and message routing between clients.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import type { HelloPayload, PingPayload, PongPayload, RoomSnapshot, StateDelta } from "../shared/protocol";
+import type {
+  HelloPayload,
+  InputFrame,
+  InputPayload,
+  PingPayload,
+  PongPayload,
+  RoomSnapshot,
+  StateDelta
+} from "../shared/protocol";
 import { createMultiplayerSession } from "../src/sprint-craft/multiplayer/session";
 import type { ColyseusClient, RoomLike } from "../src/sprint-craft/multiplayer/colyseus-client";
 import type { SessionAdapter } from "../src/sprint-craft/multiplayer/adapters";
 import { createDiagnostics } from "../src/sprint-craft/multiplayer/diagnostics";
+import { createDefaultPlayerState } from "../src/sprint-craft/voxels/player-state";
+import { applyInputFrame } from "../src/sprint-craft/voxels/player-controller";
 
 // Simulated server state shared across all clients
 class SimulatedServerState {
   serverTick = 0;
   worldSeed = 12345;
   players = new Map<string, { id: string; name: string }>();
+  playerStates = new Map<
+    string,
+    {
+      state: ReturnType<typeof createDefaultPlayerState>;
+      grounded: boolean;
+      lastSeq: number;
+    }
+  >();
 }
 
 // Simulated server room that manages multiple clients
@@ -45,6 +63,11 @@ class SimulatedServerRoom {
     
     // Add player to state
     this.state.players.set(sessionId, { id: sessionId, name: "User" });
+    this.state.playerStates.set(sessionId, {
+      state: createDefaultPlayerState(sessionId),
+      grounded: true,
+      lastSeq: -1
+    });
     
     // Queue welcome message to be sent after handlers are set up
     // (simulates async network behavior)
@@ -75,6 +98,7 @@ class SimulatedServerRoom {
 
   removeClient(sessionId: string) {
     this.state.players.delete(sessionId);
+    this.state.playerStates.delete(sessionId);
     this.clients.delete(sessionId);
     
     // Broadcast player leave
@@ -92,6 +116,22 @@ class SimulatedServerRoom {
       const ping = payload as PingPayload;
       const pong: PongPayload = { pingId: ping.pingId, serverTs: Date.now() };
       this.sendToClient(sessionId, "S_PONG", pong);
+    } else if (type === "C_INPUT") {
+      const input = payload as InputPayload;
+      const sim = this.state.playerStates.get(sessionId);
+      if (!sim || !input.frames) return;
+      input.frames.forEach((frame) => {
+        if (frame.seq <= sim.lastSeq) return;
+        const result = applyInputFrame({
+          state: sim.state,
+          frame,
+          grounded: sim.grounded,
+          getVoxel: this.getVoxelAt,
+          respawn: () => this.resetPlayer(sim.state)
+        });
+        sim.grounded = result.grounded;
+        sim.lastSeq = frame.seq;
+      });
     }
   }
 
@@ -106,34 +146,32 @@ class SimulatedServerRoom {
       serverTick: this.state.serverTick,
       worldSeed: this.state.worldSeed,
       players,
-      playerStates: players.map(p => ({
-        id: p.id,
-        pos: { x: 0, y: 0, z: 0 },
-        vel: { x: 0, y: 0, z: 0 },
-        yaw: 0,
-        pitch: 0,
-        stance: "standing" as const,
-        grounded: true
-      })),
+      playerStates: this.createVolatileStates(),
       worldEvents: []
     };
   }
 
   private createDelta(): StateDelta {
-    const players = Array.from(this.state.players.values()).map(p => ({
-      id: p.id,
-      pos: { x: 0, y: 0, z: 0 },
-      vel: { x: 0, y: 0, z: 0 },
-      yaw: 0,
-      pitch: 0,
-      stance: "standing" as const,
-      grounded: true
-    }));
-
     return {
       serverTick: this.state.serverTick,
-      players
+      players: this.createVolatileStates()
     };
+  }
+
+  private createVolatileStates() {
+    const states: StateDelta["players"] = [];
+    this.state.playerStates.forEach((entry, id) => {
+      states?.push({
+        id,
+        pos: { ...entry.state.position },
+        vel: { ...entry.state.velocity },
+        yaw: 0,
+        pitch: 0,
+        stance: entry.state.stance,
+        grounded: entry.grounded
+      });
+    });
+    return states ?? [];
   }
 
   private sendToClient(sessionId: string, type: string, payload: unknown) {
@@ -166,6 +204,20 @@ class SimulatedServerRoom {
 
   getClientCount() {
     return this.clients.size;
+  }
+
+  private getVoxelAt(_wx: number, wy: number, _wz: number) {
+    return wy <= 0 ? 1 : 0;
+  }
+
+  private resetPlayer(state: ReturnType<typeof createDefaultPlayerState>) {
+    state.position.x = 0;
+    state.position.y = 6;
+    state.position.z = 0;
+    state.velocity.x = 0;
+    state.velocity.y = 0;
+    state.velocity.z = 0;
+    state.stance = "standing";
   }
 }
 
@@ -481,6 +533,34 @@ describe("Multi-Client Server Simulation", () => {
 
       expect(ticks1).toEqual(ticks2);
       expect(ticks2).toEqual(ticks3);
+    });
+
+    it("propagates movement updates from input frames", async () => {
+      vi.useFakeTimers();
+      const { client: client1 } = createSimulatedClient("move-1", server);
+      const { adapter: adapter1, deltas: deltas1 } = createTestAdapter("move-1");
+      const session1 = createMultiplayerSession({ client: client1, adapter: adapter1 });
+      await session1.connect();
+
+      const frame: InputFrame = {
+        seq: 1,
+        dtSec: 1 / 60,
+        keysDown: ["KeyW"],
+        keysPressed: [],
+        yaw: 0,
+        pitch: 0
+      };
+
+      // Send input frame to server
+      server.handleMessage("move-1", "C_INPUT", { frames: [frame] });
+
+      server.start();
+      vi.advanceTimersByTime(100);
+      server.stop();
+      vi.useRealTimers();
+
+      const latestDelta = deltas1[deltas1.length - 1];
+      expect(latestDelta?.players?.[0]?.pos.z ?? 0).toBeGreaterThan(0);
     });
   });
 

@@ -5,7 +5,15 @@
  * These tests verify the server-side behavior without network dependencies.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import type { HelloPayload, PingPayload, PongPayload } from "../shared/protocol";
+import type {
+  HelloPayload,
+  InputFrame,
+  InputPayload,
+  PingPayload,
+  PongPayload
+} from "../shared/protocol";
+import { createDefaultPlayerState } from "../src/sprint-craft/voxels/player-state";
+import { applyInputFrame } from "../src/sprint-craft/voxels/player-controller";
 
 // Mock client for testing server room logic
 class MockServerClient {
@@ -44,6 +52,15 @@ class MockSprintCraftState {
 // Mock Room implementation that simulates SprintCraftRoom behavior
 class MockSprintCraftRoom {
   state = new MockSprintCraftState();
+  playerStates = new Map<
+    string,
+    {
+      state: ReturnType<typeof createDefaultPlayerState>;
+      grounded: boolean;
+      lastSeq: number;
+      lastCorrectionTick: number;
+    }
+  >();
   private messageHandlers = new Map<string, (client: MockServerClient, payload: unknown) => void>();
   private simulationCallback: (() => void) | null = null;
   private simulationInterval: ReturnType<typeof setInterval> | null = null;
@@ -55,6 +72,48 @@ class MockSprintCraftRoom {
       const entry = this.state.players.get(client.sessionId);
       if (!entry) return;
       entry.name = hello.name;
+    });
+
+    // Register C_INPUT handler
+    this.onMessage("C_INPUT", (client, payload) => {
+      const input = payload as InputPayload;
+      if (!input.frames || input.frames.length === 0) return;
+      const sim = this.playerStates.get(client.sessionId);
+      if (!sim) return;
+      input.frames.forEach((frame) => {
+        if (frame.seq <= sim.lastSeq) return;
+        const result = applyInputFrame({
+          state: sim.state,
+          frame,
+          grounded: sim.grounded,
+          getVoxel: this.getVoxelAt,
+          respawn: () => this.resetPlayer(sim.state)
+        });
+        sim.grounded = result.grounded;
+        sim.lastSeq = frame.seq;
+
+        if (frame.clientState) {
+          const divergence = distance(sim.state.position, frame.clientState.pos);
+          if (divergence > 0.35 && this.state.serverTick - sim.lastCorrectionTick >= 2) {
+            sim.lastCorrectionTick = this.state.serverTick;
+            client.send("S_CORRECTION", {
+              playerId: client.sessionId,
+              serverTick: this.state.serverTick,
+              state: {
+                id: client.sessionId,
+                pos: { ...sim.state.position },
+                vel: { ...sim.state.velocity },
+                yaw: frame.yaw,
+                pitch: frame.pitch,
+                stance: sim.state.stance,
+                grounded: sim.grounded
+              },
+              ackSeq: sim.lastSeq,
+              reason: "divergence"
+            });
+          }
+        }
+      });
     });
 
     // Register C_PING handler
@@ -84,10 +143,17 @@ class MockSprintCraftRoom {
     entry.id = client.sessionId;
     entry.name = "User";
     this.state.players.set(client.sessionId, entry);
+    this.playerStates.set(client.sessionId, {
+      state: createDefaultPlayerState(client.sessionId),
+      grounded: true,
+      lastSeq: -1,
+      lastCorrectionTick: -999
+    });
   }
 
   onLeave(client: MockServerClient) {
     this.state.players.delete(client.sessionId);
+    this.playerStates.delete(client.sessionId);
   }
 
   // Simulate receiving a message from client
@@ -107,6 +173,20 @@ class MockSprintCraftRoom {
     if (this.simulationInterval) {
       clearInterval(this.simulationInterval);
     }
+  }
+
+  private getVoxelAt(_wx: number, wy: number, _wz: number) {
+    return wy <= 0 ? 1 : 0;
+  }
+
+  private resetPlayer(state: ReturnType<typeof createDefaultPlayerState>) {
+    state.position.x = 0;
+    state.position.y = 6;
+    state.position.z = 0;
+    state.velocity.x = 0;
+    state.velocity.y = 0;
+    state.velocity.z = 0;
+    state.stance = "standing";
   }
 }
 
@@ -315,6 +395,57 @@ describe("SprintCraftRoom: Server Unit Tests", () => {
       vi.useRealTimers();
     });
   });
+
+  describe("C_INPUT message handling", () => {
+    it("updates player state from input frames", () => {
+      const client = new MockServerClient("session-input");
+      room.onJoin(client);
+
+      const frame: InputFrame = {
+        seq: 1,
+        dtSec: 1 / 60,
+        keysDown: ["KeyW"],
+        keysPressed: [],
+        yaw: 0,
+        pitch: 0
+      };
+
+      room.handleMessage(client, "C_INPUT", { frames: [frame] });
+
+      const sim = room.playerStates.get("session-input");
+      expect(sim).toBeDefined();
+      expect(sim?.state.position.z).toBeGreaterThan(0);
+    });
+
+    it("emits correction when divergence is high", () => {
+      const client = new MockServerClient("session-correction");
+      room.onJoin(client);
+      room.state.serverTick = 10;
+
+      const frame: InputFrame = {
+        seq: 1,
+        dtSec: 1 / 60,
+        keysDown: ["KeyW"],
+        keysPressed: [],
+        yaw: 0,
+        pitch: 0,
+        clientState: {
+          id: "session-correction",
+          pos: { x: 10, y: 6, z: 10 },
+          vel: { x: 0, y: 0, z: 0 },
+          yaw: 0,
+          pitch: 0,
+          stance: "standing",
+          grounded: true
+        }
+      };
+
+      room.handleMessage(client, "C_INPUT", { frames: [frame] });
+
+      const correction = client.getLastMessage("S_CORRECTION");
+      expect(correction).toBeDefined();
+    });
+  });
 });
 
 describe("SprintCraftRoom: Message Validation", () => {
@@ -354,3 +485,7 @@ describe("SprintCraftRoom: Message Validation", () => {
     }).not.toThrow();
   });
 });
+
+function distance(a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) {
+  return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+}

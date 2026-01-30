@@ -1,4 +1,5 @@
 import { Server } from "colyseus";
+import { WebSocketTransport } from "@colyseus/ws-transport";
 import { createServer } from "http";
 import { SprintCraftRoom } from "./rooms/SprintCraftRoom";
 
@@ -10,7 +11,9 @@ export type SprintCraftServer = {
 
 export function createSprintCraftServer(): SprintCraftServer {
   const httpServer = createServer();
-  const server = new Server({ server: httpServer });
+  const server = new Server({
+    transport: new WebSocketTransport({ server: httpServer })
+  });
   server.define("sprint-craft", SprintCraftRoom);
 
   const listen = (port = 2567, host = "0.0.0.0") =>

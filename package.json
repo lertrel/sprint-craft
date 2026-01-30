@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "./node_modules/.bin/tsc -p tsconfig.json --noEmit",
+    "build:server": "tsc -p server/tsconfig.json",
+    "start:server": "node server/dist/server/src/main.js",
     "build:standalone": "vite build -c vite.standalone.config.ts && node scripts/generate-standalone-html.mjs",
     "test": "./node_modules/.bin/vitest run",
     "test:watch": "./node_modules/.bin/vitest",
@@ -20,6 +22,7 @@
     "colyseus.js": "^0.16.22"
   },
   "devDependencies": {
+    "@types/node": "^25.1.0",
     "@vitest/coverage-v8": "^2.1.9",
     "jsdom": "^26.0.0",
     "typescript": "^5.7.3",

@@ -1,4 +1,12 @@
-import type { BlockResult, PingPayload, PongPayload, WelcomePayload } from "../../../shared/protocol";
+import type {
+  BlockResult,
+  CorrectionPayload,
+  InputFrame,
+  InputPayload,
+  PingPayload,
+  PongPayload,
+  WelcomePayload
+} from "../../../shared/protocol";
 import type { ColyseusClient, RoomLike } from "./colyseus-client";
 import type { DiagnosticsHandle } from "./diagnostics";
 import { createDiagnostics } from "./diagnostics";
@@ -42,11 +50,19 @@ export function createMultiplayerSession(options: MultiplayerSessionOptions): Mu
   let pingId = 0;
   const pendingPings = new Map<number, number>();
   const intervals = getTickIntervals(tickContract);
+  const pendingInputs: InputFrame[] = [];
+  let lastInputSentMs = 0;
+  let nextInputSeq = 0;
+  let lastTickMs: number | null = null;
 
   const log = (message: string) => logger?.(message);
 
   const connect = async () => {
     if (connected) return;
+    pendingInputs.length = 0;
+    nextInputSeq = 0;
+    lastInputSentMs = 0;
+    lastTickMs = null;
     room = await client.joinOrCreate(roomName, adapter.getLocalPlayerProgress());
     connected = true;
     log(`multiplayer: connected to ${roomName}`);
@@ -55,6 +71,7 @@ export function createMultiplayerSession(options: MultiplayerSessionOptions): Mu
       const welcome = payload as WelcomePayload;
       diagnostics.recordServerTick(welcome.snapshot.serverTick);
       diagnostics.recordSnapshotAt(Date.now());
+      adapter.setLocalPlayerId?.(welcome.playerId);
       adapter.applySnapshot(welcome.snapshot);
     });
 
@@ -70,6 +87,10 @@ export function createMultiplayerSession(options: MultiplayerSessionOptions): Mu
 
     room.onMessage("S_BLOCK_RESULT", (payload) => {
       adapter.handleBlockResult?.(payload as BlockResult);
+    });
+
+    room.onMessage("S_CORRECTION", (payload) => {
+      adapter.applyCorrection?.(payload as CorrectionPayload);
     });
 
     room.onMessage("S_PONG", (payload) => {
@@ -100,6 +121,28 @@ export function createMultiplayerSession(options: MultiplayerSessionOptions): Mu
   const tick = (nowMs: number) => {
     if (!connected || !room) return;
     diagnostics.updateSnapshotAge(nowMs);
+    const dtSec =
+      lastTickMs === null ? 1 / 60 : Math.max(0, (nowMs - lastTickMs) / 1000);
+    lastTickMs = nowMs;
+
+    if (adapter.collectInputFrame) {
+      const frame = adapter.collectInputFrame(nextInputSeq, nowMs, dtSec);
+      if (frame) {
+        pendingInputs.push(frame);
+        nextInputSeq = Math.max(nextInputSeq, frame.seq + 1);
+      }
+    }
+
+    const shouldSendInput =
+      pendingInputs.length > 0 &&
+      (nowMs - lastInputSentMs >= intervals.clientSendIntervalMs ||
+        pendingInputs.length >= 6);
+    if (shouldSendInput) {
+      const payload: InputPayload = { frames: pendingInputs.splice(0) };
+      room.send("C_INPUT", payload);
+      lastInputSentMs = nowMs;
+    }
+
     const shouldPing = nowMs - lastPingSentMs >= PING_INTERVAL_MS;
     if (shouldPing) {
       pingId += 1;
@@ -109,9 +152,6 @@ export function createMultiplayerSession(options: MultiplayerSessionOptions): Mu
       lastPingSentMs = nowMs;
     }
 
-    if (intervals.clientSendIntervalMs > 0) {
-      // Placeholder for future input/send cadence alignment.
-    }
   };
 
   const isConnected = () => connected;

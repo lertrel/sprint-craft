@@ -18,7 +18,11 @@ src/
     multiplayer/
       adapters.ts
       colyseus-client.ts
+      dead-reckoning.ts
       diagnostics.ts
+      prediction-harness.ts
+      prediction.ts
+      remote-players.ts
       session.ts
       state-model.ts
       sync-budget.ts
@@ -90,7 +94,7 @@ tests/
 
 ### Counts
 - Folders: 9 (src: 7, tests: 2)
-- Files: 64 (src: 42, tests: 22)
+- Files: 73 (src: 46, tests: 27)
 - Approximate number of functions in src: ~406 (regex count of "function" and "=>" tokens in src)
 
 ## Program Document - Core Game Function
@@ -1344,6 +1348,74 @@ tests/
   - **Side effects & dependencies:** None.
   - **Errors/Exceptions:** None.
   - **Performance notes:** O(1) updates per call.
+
+### File: `src/sprint-craft/multiplayer/dead-reckoning.ts`
+**File path:** `src/sprint-craft/multiplayer/dead-reckoning.ts`
+**Objective:** Smooth remote player motion via interpolation/extrapolation of snapshots.
+**Functions:**
+- **Function:** `createDeadReckoner(options: DeadReckoningOptions): DeadReckoner`
+  - **Objective:** Track recent snapshots and sample interpolated player state.
+  - **Logic:** Stores a small window of samples and interpolates by timestamp, clamped by max extrapolation.
+  - **Parameters:** `options` (`{ interpolationDelayMs: number; maxExtrapolationMs: number }`)
+  - **Returns:** `DeadReckoner` - exposes `pushSample` and `sample`.
+  - **Side effects & dependencies:** Maintains in-memory sample buffer.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(N) over a small fixed buffer.
+
+### File: `src/sprint-craft/multiplayer/prediction.ts`
+**File path:** `src/sprint-craft/multiplayer/prediction.ts`
+**Objective:** Track pending input frames and reconcile local prediction with authoritative snapshots.
+**Functions:**
+- **Function:** `createPredictionBuffer(): PredictionBuffer`
+  - **Objective:** Create an input buffer for pending frames.
+  - **Logic:** Returns a structure with a pending frame list.
+  - **Parameters:** None.
+  - **Returns:** `PredictionBuffer`.
+  - **Side effects & dependencies:** None.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+- **Function:** `recordInputFrame(buffer: PredictionBuffer, frame: InputFrame): void`
+  - **Objective:** Append a new input frame to the buffer.
+  - **Logic:** Pushes the frame onto the pending list.
+  - **Parameters:** `buffer`, `frame`.
+  - **Returns:** `void`.
+  - **Side effects & dependencies:** Mutates the buffer.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(1).
+- **Function:** `reconcilePrediction(options: ...): PredictionReconcileResult`
+  - **Objective:** Apply authoritative state and replay remaining inputs to re-sync prediction.
+  - **Logic:** Resets to server state, drops acknowledged frames, replays the rest via `applyInputFrame`.
+  - **Parameters:** `options` (state, grounded, serverState, ackSeq, pendingFrames, getVoxel, tuning, respawn).
+  - **Returns:** `PredictionReconcileResult` - includes error distance and remaining frames.
+  - **Side effects & dependencies:** Mutates player state and pending frame list.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(F) in number of pending frames.
+
+### File: `src/sprint-craft/multiplayer/prediction-harness.ts`
+**File path:** `src/sprint-craft/multiplayer/prediction-harness.ts`
+**Objective:** Replay recorded inputs to measure prediction and reconciliation metrics.
+**Functions:**
+- **Function:** `runPredictionHarness(options: ...): HarnessResult`
+  - **Objective:** Simulate client/server steps and compute error metrics.
+  - **Logic:** Applies inputs to server/client states and runs periodic reconciliation.
+  - **Parameters:** `options` (frames, getVoxel, tuning, correctionEveryN).
+  - **Returns:** `HarnessResult` - max/avg error and correction count.
+  - **Side effects & dependencies:** Pure in-memory simulation.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(F) per input stream.
+
+### File: `src/sprint-craft/multiplayer/remote-players.ts`
+**File path:** `src/sprint-craft/multiplayer/remote-players.ts`
+**Objective:** Manage remote player avatars and nameplates using dead reckoning.
+**Functions:**
+- **Function:** `createRemotePlayers(options: ...): RemotePlayersHandle`
+  - **Objective:** Create a manager for remote avatars and state updates.
+  - **Logic:** Maintains a map of remote players, applying snapshots/deltas and interpolating motion.
+  - **Parameters:** `options` (`{ babylon; scene; deadReckoning }`)
+  - **Returns:** `RemotePlayersHandle`.
+  - **Side effects & dependencies:** Creates/disposes Babylon meshes and nameplates.
+  - **Errors/Exceptions:** None.
+  - **Performance notes:** O(P) per tick for P remote players.
 
 ### File: `src/sprint-craft/multiplayer/session.ts`
 **File path:** `src/sprint-craft/multiplayer/session.ts`

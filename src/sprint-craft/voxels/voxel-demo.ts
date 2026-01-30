@@ -1,6 +1,7 @@
 import type { BabylonApi, SceneLike } from "../app";
 import type { CameraLike } from "../app";
 import type { InputState } from "../input";
+import type { CorrectionPayload, InputFrame, RoomSnapshot, StateDelta } from "../../../shared/protocol";
 import { generateInitialWorld, DEFAULT_GENERATION } from "./generation";
 import { createChunkRebuildScheduler } from "./rebuild-scheduler";
 import { createChunkRenderer } from "./chunk-renderer";
@@ -19,6 +20,9 @@ import { createTargetHighlight } from "./target-highlight";
 import { createPlacementPreview } from "./placement-preview";
 import { createCameraMode } from "./camera-mode";
 import { formatUsername, getAnonymousUserName } from "../usernames";
+import { createPredictionBuffer, recordInputFrame, reconcilePrediction } from "../multiplayer/prediction";
+import { createRemotePlayers } from "../multiplayer/remote-players";
+import { DEFAULT_TICK_CONTRACT } from "../multiplayer/tick-contract";
 
 export type VoxelDemo = {
   tick: (dtSec: number) => void;
@@ -28,6 +32,13 @@ export type VoxelDemo = {
   getRebuildCount: () => number;
   getWorld: () => ReturnType<typeof createWorld>;
   getPlayerState: () => ReturnType<typeof createDefaultPlayerState>;
+  getLocalPlayerId: () => string;
+  setLocalPlayerId: (id: string) => void;
+  collectInputFrame: (seq: number, dtSec: number, nowMs: number) => InputFrame;
+  recordInputFrame: (frame: InputFrame) => void;
+  applySnapshot: (snapshot: RoomSnapshot, nowMs: number) => void;
+  applyDelta: (delta: StateDelta, nowMs: number) => void;
+  applyCorrection: (correction: CorrectionPayload) => void;
   setPlayerName: (name: string) => void;
 };
 
@@ -42,6 +53,20 @@ const FACING_YAW_OFFSETS: Record<MovementKey, number> = {
   KeyA: Math.PI / 2,
   KeyD: -Math.PI / 2
 };
+
+const INPUT_KEYS = [
+  "KeyW",
+  "KeyA",
+  "KeyS",
+  "KeyD",
+  "ShiftLeft",
+  "ShiftRight",
+  "ControlLeft",
+  "ControlRight",
+  "AltLeft",
+  "AltRight",
+  "Space"
+];
 
 export function updateLastMovementKey(
   lastKey: MovementKey | null,
@@ -151,6 +176,18 @@ export function createVoxelDemo(options: {
   const targeting = createTargeting({ camera, world, maxDistance: targetMaxDistance });
   const highlight = createTargetHighlight({ babylon, scene });
   const preview = createPlacementPreview({ babylon, scene });
+  const predictionBuffer = createPredictionBuffer();
+  const remotePlayers = createRemotePlayers({
+    babylon,
+    scene,
+    deadReckoning: {
+      interpolationDelayMs: DEFAULT_TICK_CONTRACT.interpolationDelayMs,
+      maxExtrapolationMs: DEFAULT_TICK_CONTRACT.maxExtrapolationMs
+    }
+  });
+  let localPlayerId = player.state.playerId;
+  remotePlayers.setLocalPlayerId(localPlayerId);
+  let timeMs = 0;
 
   const interactor = createBlockInteractor({
     input,
@@ -170,6 +207,7 @@ export function createVoxelDemo(options: {
   const minCameraDistance = 0.4;
 
   const tick = (dtSec: number) => {
+    timeMs += dtSec * 1000;
     player.tick(dtSec);
     cameraMode.toggleIfPressed((code) => input.wasKeyPressed(code));
 
@@ -300,6 +338,7 @@ export function createVoxelDemo(options: {
       z: headPos.z
     });
 
+    remotePlayers.tick(timeMs);
     scheduler.step(rebuildBudgetPerFrame, rebuildOne);
   };
 
@@ -311,12 +350,64 @@ export function createVoxelDemo(options: {
       preview.dispose();
       avatar.dispose();
       nameplate.dispose();
+      remotePlayers.dispose();
     },
     getChunkCount: () => world.chunks.size,
     getChunkMeshCount: () => renderer.getMeshCount(),
     getRebuildCount: () => rebuildCount,
     getWorld: () => world,
     getPlayerState: () => player.state,
+    getLocalPlayerId: () => localPlayerId,
+    setLocalPlayerId: (id: string) => {
+      localPlayerId = id;
+      player.state.playerId = id;
+      remotePlayers.setLocalPlayerId(id);
+    },
+    collectInputFrame: (seq: number, dtSec: number, nowMs: number) => {
+      const yaw = camera.rotation?.y ?? 0;
+      const pitch = camera.rotation?.x ?? 0;
+      return {
+        seq,
+        dtSec,
+        keysDown: INPUT_KEYS.filter((code) => input.isKeyDown(code)),
+        keysPressed: INPUT_KEYS.filter((code) => input.wasKeyPressed(code)),
+        yaw,
+        pitch,
+        clientState: {
+          id: player.state.playerId,
+          pos: { ...player.state.position },
+          vel: { ...player.state.velocity },
+          yaw,
+          pitch,
+          stance: player.state.stance,
+          grounded: player.isGrounded(),
+          hotbarSlot: getSelectedSlot()
+        }
+      };
+    },
+    recordInputFrame: (frame: InputFrame) => {
+      recordInputFrame(predictionBuffer, frame);
+    },
+    applySnapshot: (snapshot: RoomSnapshot, nowMs: number) => {
+      remotePlayers.applySnapshot(snapshot, nowMs);
+    },
+    applyDelta: (delta: StateDelta, nowMs: number) => {
+      remotePlayers.applyDelta(delta, nowMs);
+    },
+    applyCorrection: (correction: CorrectionPayload) => {
+      if (correction.playerId !== localPlayerId) return;
+      const result = reconcilePrediction({
+        state: player.state,
+        grounded: player.isGrounded(),
+        serverState: correction.state,
+        ackSeq: correction.ackSeq,
+        pendingFrames: predictionBuffer.pendingFrames,
+        getVoxel: world.getVoxel,
+        respawn: player.respawn
+      });
+      predictionBuffer.pendingFrames = result.pendingFrames;
+      player.setGrounded(result.grounded);
+    },
     setPlayerName: (name: string) => {
       nameplate.setText(name);
     }
